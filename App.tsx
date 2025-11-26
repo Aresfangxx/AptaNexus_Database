@@ -1,18 +1,75 @@
+
 import React, { useState } from 'react';
 import { CONTENT } from './constants';
 import { Language } from './types';
 import { StemLoopIcon, NeuralTexture, SearchIcon, ArrowRight, DatabaseIcon } from './components/Icons';
 import { ParticleBackground } from './components/ParticleBackground';
+import { SearchResults } from './components/SearchResults';
+
+type ViewState = 'HOME' | 'SEARCH_RESULTS';
 
 export default function App() {
   const [lang, setLang] = useState<Language>('en');
+  const [view, setView] = useState<ViewState>('HOME');
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const t = CONTENT[lang];
 
+  // Modified to switch view immediately on submit if coming from elsewhere, 
+  // but logic for Hero input is handled via onFocus now.
+  const handleSearchSubmit = (e?: React.FormEvent, term?: string) => {
+    if (e) e.preventDefault();
+    const q = term || searchQuery;
+    // We allow empty query to go to search results now (it shows the guide)
+    setSearchQuery(q);
+    setView('SEARCH_RESULTS');
+    window.scrollTo(0, 0);
+  };
+
+  const handleNavigateHome = () => {
+    setView('HOME');
+    setSearchQuery('');
+    window.scrollTo(0, 0);
+  };
+
+  // --- RENDER SEARCH RESULTS VIEW ---
+  if (view === 'SEARCH_RESULTS') {
+    return (
+      <div className="min-h-screen bg-[#fcfcfc] text-academic-900 font-sans selection:bg-slate-200">
+         {/* Simple Navbar for Inner Pages */}
+         <nav className="fixed top-0 w-full bg-white z-50 border-b border-academic-200 h-16 flex items-center justify-between px-6 lg:px-12">
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleNavigateHome}
+            >
+               <DatabaseIcon className="w-6 h-6 text-academic-700" />
+               <span className="font-serif font-semibold text-lg tracking-tight text-academic-900">AptamerDB</span>
+            </div>
+            <div className="flex gap-4 items-center">
+               <button 
+                onClick={() => setLang(lang === 'en' ? 'cn' : 'en')}
+                className="mr-4 text-xs font-semibold uppercase tracking-wider text-academic-500 hover:text-academic-900"
+               >
+                 {lang === 'en' ? '中文' : 'EN'}
+               </button>
+               <button onClick={handleNavigateHome} className="text-sm font-medium text-academic-600 hover:text-academic-900">Home</button>
+               <button className="text-sm font-medium text-academic-600 hover:text-academic-900">API</button>
+            </div>
+         </nav>
+         
+         <div className="pt-16">
+            <SearchResults initialQuery={searchQuery} onNavigateHome={handleNavigateHome} lang={lang} />
+         </div>
+      </div>
+    );
+  }
+
+  // --- RENDER HOME VIEW ---
   return (
     <div className="min-h-screen bg-[#fcfcfc] text-academic-900 font-sans selection:bg-slate-200 overflow-x-hidden">
       {/* Navbar */}
       <nav className="fixed top-0 w-full bg-[#fcfcfc]/90 backdrop-blur-md z-50 border-b border-academic-100 h-16 flex items-center justify-between px-6 lg:px-12 transition-all duration-300">
-        <div className="flex items-center gap-2 group cursor-pointer">
+        <div className="flex items-center gap-2 group cursor-pointer" onClick={handleNavigateHome}>
            <div className="transform transition-transform group-hover:rotate-12 duration-500">
              <DatabaseIcon className="w-6 h-6 text-academic-700" />
            </div>
@@ -70,7 +127,14 @@ export default function App() {
 
               {/* Quick Actions / CTA in Hero */}
               <div className="pt-4 flex flex-wrap gap-4 animate-fade-in-up delay-500">
-                 <button className="bg-academic-900 text-white px-8 py-3 rounded-sm font-medium hover:bg-academic-800 transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+                 <button 
+                  onClick={() => {
+                    // Navigate to search immediately
+                    setView('SEARCH_RESULTS');
+                    window.scrollTo(0,0);
+                  }}
+                  className="bg-academic-900 text-white px-8 py-3 rounded-sm font-medium hover:bg-academic-800 transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                 >
                    {t.search.buttons[3]}
                  </button>
                  <button className="border border-academic-300 px-8 py-3 rounded-sm font-medium text-academic-700 hover:bg-academic-50 transition-all hover:border-academic-400">
@@ -98,26 +162,35 @@ export default function App() {
           </div>
         </section>
 
-        {/* SEARCH SECTION */}
+        {/* SEARCH SECTION (Home Page) */}
         <section id="search" className="py-12 bg-white border-y border-academic-100">
           <div className="max-w-4xl mx-auto px-6">
-             <div className="bg-academic-50 p-1 rounded-lg border border-academic-200 shadow-sm flex items-center focus-within:ring-2 focus-within:ring-academic-200 focus-within:border-academic-300 transition-all duration-300 hover:shadow-md">
+             {/* This input now just acts as a trigger to the detailed search page */}
+             <div className="bg-academic-50 p-1 rounded-lg border border-academic-200 shadow-sm flex items-center focus-within:ring-2 focus-within:ring-academic-200 focus-within:border-academic-300 transition-all duration-300 hover:shadow-md cursor-text">
                 <div className="pl-4 pr-3 text-academic-400">
                   <SearchIcon className="w-6 h-6" />
                 </div>
                 <input 
                   type="text" 
+                  value={searchQuery}
+                  onFocus={() => {
+                    setView('SEARCH_RESULTS');
+                    window.scrollTo(0,0);
+                  }}
+                  readOnly // It redirects immediately, so reading only is fine to prevent flickering
                   placeholder={t.search.placeholder}
-                  className="w-full bg-transparent py-4 text-lg text-academic-900 placeholder:text-academic-400 focus:outline-none font-light"
+                  className="w-full bg-transparent py-4 text-lg text-academic-900 placeholder:text-academic-400 focus:outline-none font-light cursor-text"
                 />
-                <button className="bg-academic-900 text-white px-6 py-2.5 rounded m-1.5 font-medium text-sm hover:bg-academic-800 transition-colors shadow-sm">
+                <button 
+                  className="bg-academic-900 text-white px-6 py-2.5 rounded m-1.5 font-medium text-sm hover:bg-academic-800 transition-colors shadow-sm"
+                >
                   Search
                 </button>
              </div>
              
              <div className="mt-6 flex flex-wrap justify-center gap-3">
                {t.search.buttons.slice(0, 3).map((btn, idx) => (
-                 <button key={idx} className="text-sm px-4 py-2 bg-white border border-academic-200 rounded text-academic-600 hover:border-academic-400 hover:text-academic-900 hover:bg-academic-50 transition-all hover:-translate-y-0.5 shadow-sm hover:shadow">
+                 <button key={idx} onClick={() => { setView('SEARCH_RESULTS'); window.scrollTo(0,0); }} className="text-sm px-4 py-2 bg-white border border-academic-200 rounded text-academic-600 hover:border-academic-400 hover:text-academic-900 hover:bg-academic-50 transition-all hover:-translate-y-0.5 shadow-sm hover:shadow">
                    {btn}
                  </button>
                ))}

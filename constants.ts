@@ -1,3 +1,4 @@
+
 import { ContentText, Language } from './types';
 
 export const CONTENT: Record<Language, ContentText> = {
@@ -22,7 +23,8 @@ export const CONTENT: Record<Language, ContentText> = {
     search: {
       title: "Start Exploring Aptamers",
       placeholder: "Search aptamer sequences, targets, or keywords…",
-      buttons: ["Search by Sequence", "Search by Target", "Search by Affinity", "Explore 20-Year Literature"]
+      buttons: ["Search by Sequence", "Search by Target", "Search by Affinity", "Explore 20-Year Literature"],
+      hints: ["Search by Target Name (e.g. Thrombin)", "Search by Sequence (e.g. GGTTGG...)", "Search by Gene Symbol (e.g. VEGF)", "Filter by Affinity Level"]
     },
     stats: {
       items: [
@@ -73,7 +75,8 @@ export const CONTENT: Record<Language, ContentText> = {
     search: {
       title: "从序列、靶标或关键字开始探索…",
       placeholder: "输入序列、靶标或关键词…",
-      buttons: ["序列检索", "靶标检索", "亲和力检索", "探索 20 年文献"]
+      buttons: ["序列检索", "靶标检索", "亲和力检索", "探索 20 年文献"],
+      hints: ["按靶标名称搜索 (如 Thrombin)", "按序列搜索 (如 GGTTGG...)", "按基因符号搜索 (如 VEGF)", "按亲和力等级筛选"]
     },
     stats: {
       items: [
