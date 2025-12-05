@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 export function resolveDataPath(): string {
   const envPath = process.env.APTAMERS_PATH;
   if (envPath && fs.existsSync(envPath)) return envPath;
-  const p = path.resolve(__dirname, '../../APTAMERS.jsonl');
+  const p = path.resolve(__dirname, '../../public/APTAMERS.jsonl');
   return p;
 }
 

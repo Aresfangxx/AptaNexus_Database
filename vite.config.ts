@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
           name: 'serve-aptamers-jsonl',
           configureServer(server) {
             server.middlewares.use('/APTAMERS.jsonl', (req, res, next) => {
-              const filePath = path.resolve(__dirname, 'APTAMERS.jsonl');
+              const filePath = path.resolve(__dirname, 'public/APTAMERS.jsonl');
               if (fs.existsSync(filePath)) {
                 res.setHeader('Content-Type', 'application/json');
                 fs.createReadStream(filePath).pipe(res);
@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
           configureServer(server) {
             server.middlewares.use('/SecStr', (req, res, next) => {
               const reqPath = req.url?.replace(/^\/SecStr\/?/, '') || '';
-              const filePath = path.resolve(__dirname, 'SecStr', reqPath);
+              const filePath = path.resolve(__dirname, 'public/SecStr', reqPath);
               if (!fs.existsSync(filePath)) return next();
               const ext = path.extname(filePath).toLowerCase();
               const mime =
