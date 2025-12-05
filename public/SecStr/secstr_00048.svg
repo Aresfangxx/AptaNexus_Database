@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<svg xmlns="http://www.w3.org/2000/svg" height="452" width="452">
+  <script type="text/ecmascript">
+    <![CDATA[
+      var shown = 1;
+      function click() {
+        var seq = document.getElementById("seq");
+        if (shown==1) {
+          seq.setAttribute("style", "visibility: hidden");
+          shown = 0;
+        } else {
+          seq.setAttribute("style", "visibility: visible");
+          shown = 1;
+        }
+      }
+    ]]>
+  </script>
+  <style type="text/css">
+    <![CDATA[
+      .nucleotide {
+        font-family: SansSerif;
+      }
+      .backbone {
+        stroke: grey;
+        fill:   none;
+        stroke-width: 1.5;
+      }
+      .basepairs {
+        stroke: red;
+        fill:   none;
+        stroke-width: 2.5;
+      }
+    ]]>
+  </style>
+
+  <rect style="stroke: white; fill: white" height="452" x="0" y="0" width="452" onclick="click(evt)" />
+  <g transform="scale(3.013333,3.013333) translate(-18.000000,-38.500000)">
+    <polyline class="backbone" id="outline" points="
+      71.956,45.854
+      57.039,52.667
+      55.750,69.015
+      69.415,78.081
+      75.646,91.726
+      81.877,105.370
+      88.108,119.015
+      86.970,132.950
+      98.247,141.216
+      104.479,154.861
+      102.382,171.125
+      115.581,180.857
+      130.499,174.044
+      131.788,157.696
+      118.123,148.630
+      111.892,134.985
+      113.030,121.050
+      101.753,112.784
+      95.521,99.139
+      89.290,85.495
+      83.059,71.850
+    " />
+    <g id="pairs">
+      <line class="basepairs" id="4,21" x1="69.41457" y1="78.08148" x2="83.05904" y2="71.85025" />
+      <line class="basepairs" id="5,20" x1="75.64579" y1="91.72595" x2="89.29028" y2="85.49474" />
+      <line class="basepairs" id="6,19" x1="81.87702" y1="105.37044" x2="95.52150" y2="99.13921" />
+      <line class="basepairs" id="7,18" x1="88.10825" y1="119.01492" x2="101.75272" y2="112.78369" />
+      <line class="basepairs" id="9,16" x1="98.24728" y1="141.21631" x2="111.89175" y2="134.98508" />
+      <line class="basepairs" id="10,15" x1="104.47850" y1="154.86078" x2="118.12298" y2="148.62956" />
+    </g>
+    <g transform="translate(-4.6, 4)" id="seq">
+      <text class="nucleotide" x="71.956" y="45.854">U</text>
+      <text class="nucleotide" x="57.039" y="52.667">C</text>
+      <text class="nucleotide" x="55.750" y="69.015">G</text>
+      <text class="nucleotide" x="69.415" y="78.081">A</text>
+      <text class="nucleotide" x="75.646" y="91.726">G</text>
+      <text class="nucleotide" x="81.877" y="105.370">A</text>
+      <text class="nucleotide" x="88.108" y="119.015">U</text>
+      <text class="nucleotide" x="86.970" y="132.950">A</text>
+      <text class="nucleotide" x="98.247" y="141.216">G</text>
+      <text class="nucleotide" x="104.479" y="154.861">U</text>
+      <text class="nucleotide" x="102.382" y="171.125">A</text>
+      <text class="nucleotide" x="115.581" y="180.857">A</text>
+      <text class="nucleotide" x="130.499" y="174.044">G</text>
+      <text class="nucleotide" x="131.788" y="157.696">U</text>
+      <text class="nucleotide" x="118.123" y="148.630">G</text>
+      <text class="nucleotide" x="111.892" y="134.985">C</text>
+      <text class="nucleotide" x="113.030" y="121.050">A</text>
+      <text class="nucleotide" x="101.753" y="112.784">A</text>
+      <text class="nucleotide" x="95.521" y="99.139">U</text>
+      <text class="nucleotide" x="89.290" y="85.495">C</text>
+      <text class="nucleotide" x="83.059" y="71.850">U</text>
+    </g>
+  </g>
+<script type="text/ecmascript">
+<![CDATA[
+  let sequence = "UCGAGAUAGUAAGUGCAAUCU";
+  let structure = "...((((.((....)).))))";
+  const basepairs = [
+    { i: 4, j: 21, type: "cWW" },
+    { i: 5, j: 20, type: "cWW" },
+    { i: 6, j: 19, type: "cWW" },
+    { i: 7, j: 18, type: "cWW" },
+    { i: 9, j: 16, type: "cWW" },
+    { i: 10, j: 15, type: "cWW" }];
+  const coords = [
+    { x: 71.956, y: 45.854 },
+    { x: 57.039, y: 52.667 },
+    { x: 55.750, y: 69.015 },
+    { x: 69.415, y: 78.081 },
+    { x: 75.646, y: 91.726 },
+    { x: 81.877, y: 105.370 },
+    { x: 88.108, y: 119.015 },
+    { x: 86.970, y: 132.950 },
+    { x: 98.247, y: 141.216 },
+    { x: 104.479, y: 154.861 },
+    { x: 102.382, y: 171.125 },
+    { x: 115.581, y: 180.857 },
+    { x: 130.499, y: 174.044 },
+    { x: 131.788, y: 157.696 },
+    { x: 118.123, y: 148.630 },
+    { x: 111.892, y: 134.985 },
+    { x: 113.030, y: 121.050 },
+    { x: 101.753, y: 112.784 },
+    { x: 95.521, y: 99.139 },
+    { x: 89.290, y: 85.495 },
+    { x: 83.059, y: 71.850 }];
+]]>
+</script>
+</svg>

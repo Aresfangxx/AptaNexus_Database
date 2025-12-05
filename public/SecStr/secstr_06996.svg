@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<svg xmlns="http://www.w3.org/2000/svg" height="452" width="452">
+  <script type="text/ecmascript">
+    <![CDATA[
+      var shown = 1;
+      function click() {
+        var seq = document.getElementById("seq");
+        if (shown==1) {
+          seq.setAttribute("style", "visibility: hidden");
+          shown = 0;
+        } else {
+          seq.setAttribute("style", "visibility: visible");
+          shown = 1;
+        }
+      }
+    ]]>
+  </script>
+  <style type="text/css">
+    <![CDATA[
+      .nucleotide {
+        font-family: SansSerif;
+      }
+      .backbone {
+        stroke: grey;
+        fill:   none;
+        stroke-width: 1.5;
+      }
+      .basepairs {
+        stroke: red;
+        fill:   none;
+        stroke-width: 2.5;
+      }
+    ]]>
+  </style>
+
+  <rect style="stroke: white; fill: white" height="452" x="0" y="0" width="452" onclick="click(evt)" />
+  <g transform="scale(2.354167,2.354167) translate(-15.000000,22.500000)">
+    <polyline class="backbone" id="outline" points="
+      99.580,-15.069
+      84.739,-13.165
+      70.785,-7.765
+      58.529,0.816
+      48.683,12.082
+      41.818,25.376
+      38.334,39.927
+      38.433,54.889
+      42.109,69.392
+      49.149,82.594
+      59.144,93.728
+      71.513,102.147
+      85.537,107.362
+      100.401,109.069
+      115.242,107.170
+      129.198,101.774
+      137.801,114.062
+      146.405,126.349
+      155.009,138.636
+      155.898,155.011
+      170.644,162.186
+      184.078,152.780
+      182.379,136.469
+      167.296,130.033
+      158.692,117.745
+      150.089,105.458
+      141.485,93.171
+      151.328,81.902
+      158.189,68.606
+      161.668,54.054
+      161.565,39.092
+      157.884,24.590
+      150.840,11.390
+      140.841,0.259
+      128.470,-8.156
+    " />
+    <g id="pairs">
+      <line class="basepairs" id="16,27" x1="129.19765" y1="101.77441" x2="141.48492" y2="93.17076" />
+      <line class="basepairs" id="17,26" x1="137.80128" y1="114.06169" x2="150.08858" y2="105.45804" />
+      <line class="basepairs" id="18,25" x1="146.40494" y1="126.34897" x2="158.69221" y2="117.74532" />
+      <line class="basepairs" id="19,24" x1="155.00858" y1="138.63625" x2="167.29587" y2="130.03261" />
+    </g>
+    <g transform="translate(-4.6, 4)" id="seq">
+      <text class="nucleotide" x="99.580" y="-15.069">U</text>
+      <text class="nucleotide" x="84.739" y="-13.165">U</text>
+      <text class="nucleotide" x="70.785" y="-7.765">U</text>
+      <text class="nucleotide" x="58.529" y="0.816">U</text>
+      <text class="nucleotide" x="48.683" y="12.082">U</text>
+      <text class="nucleotide" x="41.818" y="25.376">U</text>
+      <text class="nucleotide" x="38.334" y="39.927">C</text>
+      <text class="nucleotide" x="38.433" y="54.889">A</text>
+      <text class="nucleotide" x="42.109" y="69.392">C</text>
+      <text class="nucleotide" x="49.149" y="82.594">C</text>
+      <text class="nucleotide" x="59.144" y="93.728">C</text>
+      <text class="nucleotide" x="71.513" y="102.147">C</text>
+      <text class="nucleotide" x="85.537" y="107.362">A</text>
+      <text class="nucleotide" x="100.401" y="109.069">C</text>
+      <text class="nucleotide" x="115.242" y="107.170">C</text>
+      <text class="nucleotide" x="129.198" y="101.774">U</text>
+      <text class="nucleotide" x="137.801" y="114.062">C</text>
+      <text class="nucleotide" x="146.405" y="126.349">G</text>
+      <text class="nucleotide" x="155.009" y="138.636">C</text>
+      <text class="nucleotide" x="155.898" y="155.011">U</text>
+      <text class="nucleotide" x="170.644" y="162.186">C</text>
+      <text class="nucleotide" x="184.078" y="152.780">C</text>
+      <text class="nucleotide" x="182.379" y="136.469">C</text>
+      <text class="nucleotide" x="167.296" y="130.033">G</text>
+      <text class="nucleotide" x="158.692" y="117.745">U</text>
+      <text class="nucleotide" x="150.089" y="105.458">G</text>
+      <text class="nucleotide" x="141.485" y="93.171">A</text>
+      <text class="nucleotide" x="151.328" y="81.902">C</text>
+      <text class="nucleotide" x="158.189" y="68.606">A</text>
+      <text class="nucleotide" x="161.668" y="54.054">C</text>
+      <text class="nucleotide" x="161.565" y="39.092">U</text>
+      <text class="nucleotide" x="157.884" y="24.590">A</text>
+      <text class="nucleotide" x="150.840" y="11.390">A</text>
+      <text class="nucleotide" x="140.841" y="0.259">U</text>
+      <text class="nucleotide" x="128.470" y="-8.156">G</text>
+    </g>
+  </g>
+<script type="text/ecmascript">
+<![CDATA[
+  let sequence = "UUUUUUCACCCCACCUCGCUCCCGUGACACUAAUG";
+  let structure = "...............((((....))))........";
+  const basepairs = [
+    { i: 16, j: 27, type: "cWW" },
+    { i: 17, j: 26, type: "cWW" },
+    { i: 18, j: 25, type: "cWW" },
+    { i: 19, j: 24, type: "cWW" }];
+  const coords = [
+    { x: 99.580, y: -15.069 },
+    { x: 84.739, y: -13.165 },
+    { x: 70.785, y: -7.765 },
+    { x: 58.529, y:  0.816 },
+    { x: 48.683, y: 12.082 },
+    { x: 41.818, y: 25.376 },
+    { x: 38.334, y: 39.927 },
+    { x: 38.433, y: 54.889 },
+    { x: 42.109, y: 69.392 },
+    { x: 49.149, y: 82.594 },
+    { x: 59.144, y: 93.728 },
+    { x: 71.513, y: 102.147 },
+    { x: 85.537, y: 107.362 },
+    { x: 100.401, y: 109.069 },
+    { x: 115.242, y: 107.170 },
+    { x: 129.198, y: 101.774 },
+    { x: 137.801, y: 114.062 },
+    { x: 146.405, y: 126.349 },
+    { x: 155.009, y: 138.636 },
+    { x: 155.898, y: 155.011 },
+    { x: 170.644, y: 162.186 },
+    { x: 184.078, y: 152.780 },
+    { x: 182.379, y: 136.469 },
+    { x: 167.296, y: 130.033 },
+    { x: 158.692, y: 117.745 },
+    { x: 150.089, y: 105.458 },
+    { x: 141.485, y: 93.171 },
+    { x: 151.328, y: 81.902 },
+    { x: 158.189, y: 68.606 },
+    { x: 161.668, y: 54.054 },
+    { x: 161.565, y: 39.092 },
+    { x: 157.884, y: 24.590 },
+    { x: 150.840, y: 11.390 },
+    { x: 140.841, y:  0.259 },
+    { x: 128.470, y: -8.156 }];
+]]>
+</script>
+</svg>

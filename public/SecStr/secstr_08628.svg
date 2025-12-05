@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<svg xmlns="http://www.w3.org/2000/svg" height="452" width="452">
+  <script type="text/ecmascript">
+    <![CDATA[
+      var shown = 1;
+      function click() {
+        var seq = document.getElementById("seq");
+        if (shown==1) {
+          seq.setAttribute("style", "visibility: hidden");
+          shown = 0;
+        } else {
+          seq.setAttribute("style", "visibility: visible");
+          shown = 1;
+        }
+      }
+    ]]>
+  </script>
+  <style type="text/css">
+    <![CDATA[
+      .nucleotide {
+        font-family: SansSerif;
+      }
+      .backbone {
+        stroke: grey;
+        fill:   none;
+        stroke-width: 1.5;
+      }
+      .basepairs {
+        stroke: red;
+        fill:   none;
+        stroke-width: 2.5;
+      }
+    ]]>
+  </style>
+
+  <rect style="stroke: white; fill: white" height="452" x="0" y="0" width="452" onclick="click(evt)" />
+  <g transform="scale(4.475247,4.475247) translate(-38.000000,-21.500000)">
+    <polyline class="backbone" id="outline" points="
+      83.641,40.589
+      87.074,54.592
+      80.973,68.295
+      74.872,81.998
+      61.294,91.195
+      62.739,107.530
+      77.720,114.200
+      90.827,104.343
+      88.575,88.100
+      94.676,74.396
+      100.777,60.693
+      113.481,53.875
+      116.150,39.706
+      106.797,28.733
+    " />
+    <g id="pairs">
+      <line class="basepairs" id="2,11" x1="87.07431" y1="54.59212" x2="100.77750" y2="60.69318" />
+      <line class="basepairs" id="3,10" x1="80.97326" y1="68.29530" x2="94.67645" y2="74.39635" />
+      <line class="basepairs" id="4,9" x1="74.87222" y1="81.99849" x2="88.57539" y2="88.09953" />
+    </g>
+    <g transform="translate(-4.6, 4)" id="seq">
+      <text class="nucleotide" x="83.641" y="40.589">A</text>
+      <text class="nucleotide" x="87.074" y="54.592">U</text>
+      <text class="nucleotide" x="80.973" y="68.295">C</text>
+      <text class="nucleotide" x="74.872" y="81.998">C</text>
+      <text class="nucleotide" x="61.294" y="91.195">C</text>
+      <text class="nucleotide" x="62.739" y="107.530">C</text>
+      <text class="nucleotide" x="77.720" y="114.200">U</text>
+      <text class="nucleotide" x="90.827" y="104.343">A</text>
+      <text class="nucleotide" x="88.575" y="88.100">G</text>
+      <text class="nucleotide" x="94.676" y="74.396">G</text>
+      <text class="nucleotide" x="100.777" y="60.693">A</text>
+      <text class="nucleotide" x="113.481" y="53.875">A</text>
+      <text class="nucleotide" x="116.150" y="39.706">A</text>
+      <text class="nucleotide" x="106.797" y="28.733">G</text>
+    </g>
+  </g>
+<script type="text/ecmascript">
+<![CDATA[
+  let sequence = "AUCCCCUAGGAAAG";
+  let structure = ".(((....)))...";
+  const basepairs = [
+    { i: 2, j: 11, type: "cWW" },
+    { i: 3, j: 10, type: "cWW" },
+    { i: 4, j: 9, type: "cWW" }];
+  const coords = [
+    { x: 83.641, y: 40.589 },
+    { x: 87.074, y: 54.592 },
+    { x: 80.973, y: 68.295 },
+    { x: 74.872, y: 81.998 },
+    { x: 61.294, y: 91.195 },
+    { x: 62.739, y: 107.530 },
+    { x: 77.720, y: 114.200 },
+    { x: 90.827, y: 104.343 },
+    { x: 88.575, y: 88.100 },
+    { x: 94.676, y: 74.396 },
+    { x: 100.777, y: 60.693 },
+    { x: 113.481, y: 53.875 },
+    { x: 116.150, y: 39.706 },
+    { x: 106.797, y: 28.733 }];
+]]>
+</script>
+</svg>

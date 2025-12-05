@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<svg xmlns="http://www.w3.org/2000/svg" height="452" width="452">
+  <script type="text/ecmascript">
+    <![CDATA[
+      var shown = 1;
+      function click() {
+        var seq = document.getElementById("seq");
+        if (shown==1) {
+          seq.setAttribute("style", "visibility: hidden");
+          shown = 0;
+        } else {
+          seq.setAttribute("style", "visibility: visible");
+          shown = 1;
+        }
+      }
+    ]]>
+  </script>
+  <style type="text/css">
+    <![CDATA[
+      .nucleotide {
+        font-family: SansSerif;
+      }
+      .backbone {
+        stroke: grey;
+        fill:   none;
+        stroke-width: 1.5;
+      }
+      .basepairs {
+        stroke: red;
+        fill:   none;
+        stroke-width: 2.5;
+      }
+    ]]>
+  </style>
+
+  <rect style="stroke: white; fill: white" height="452" x="0" y="0" width="452" onclick="click(evt)" />
+  <g transform="scale(9.040000,9.040000) translate(-74.500000,-49.500000)">
+    <polyline class="backbone" id="outline" points="
+      92.500,56.500
+      82.218,68.815
+      85.577,84.503
+      100.000,91.528
+      114.423,84.503
+      117.782,68.815
+      107.500,56.500
+    " />
+    <g id="pairs">
+    </g>
+    <g transform="translate(-4.6, 4)" id="seq">
+      <text class="nucleotide" x="92.500" y="56.500">U</text>
+      <text class="nucleotide" x="82.218" y="68.815">G</text>
+      <text class="nucleotide" x="85.577" y="84.503">U</text>
+      <text class="nucleotide" x="100.000" y="91.528">U</text>
+      <text class="nucleotide" x="114.423" y="84.503">U</text>
+      <text class="nucleotide" x="117.782" y="68.815">G</text>
+      <text class="nucleotide" x="107.500" y="56.500">U</text>
+    </g>
+  </g>
+<script type="text/ecmascript">
+<![CDATA[
+  let sequence = "UGUUUGU";
+  let structure = ".......";
+  const basepairs = [
+];
+  const coords = [
+    { x: 92.500, y: 56.500 },
+    { x: 82.218, y: 68.815 },
+    { x: 85.577, y: 84.503 },
+    { x: 100.000, y: 91.528 },
+    { x: 114.423, y: 84.503 },
+    { x: 117.782, y: 68.815 },
+    { x: 107.500, y: 56.500 }];
+]]>
+</script>
+</svg>

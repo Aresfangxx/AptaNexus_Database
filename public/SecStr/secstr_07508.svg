@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<svg xmlns="http://www.w3.org/2000/svg" height="452" width="452">
+  <script type="text/ecmascript">
+    <![CDATA[
+      var shown = 1;
+      function click() {
+        var seq = document.getElementById("seq");
+        if (shown==1) {
+          seq.setAttribute("style", "visibility: hidden");
+          shown = 0;
+        } else {
+          seq.setAttribute("style", "visibility: visible");
+          shown = 1;
+        }
+      }
+    ]]>
+  </script>
+  <style type="text/css">
+    <![CDATA[
+      .nucleotide {
+        font-family: SansSerif;
+      }
+      .backbone {
+        stroke: grey;
+        fill:   none;
+        stroke-width: 1.5;
+      }
+      .basepairs {
+        stroke: red;
+        fill:   none;
+        stroke-width: 2.5;
+      }
+    ]]>
+  </style>
+
+  <rect style="stroke: white; fill: white" height="452" x="0" y="0" width="452" onclick="click(evt)" />
+  <g transform="scale(10.761905,10.761905) translate(-78.500000,-58.000000)">
+    <polyline class="backbone" id="outline" points="
+      92.500,65.500
+      86.454,81.339
+      100.000,91.534
+      113.546,81.339
+      107.500,65.500
+    " />
+    <g id="pairs">
+    </g>
+    <g transform="translate(-4.6, 4)" id="seq">
+      <text class="nucleotide" x="92.500" y="65.500">A</text>
+      <text class="nucleotide" x="86.454" y="81.339">C</text>
+      <text class="nucleotide" x="100.000" y="91.534">U</text>
+      <text class="nucleotide" x="113.546" y="81.339">U</text>
+      <text class="nucleotide" x="107.500" y="65.500">C</text>
+    </g>
+  </g>
+<script type="text/ecmascript">
+<![CDATA[
+  let sequence = "ACUUC";
+  let structure = ".....";
+  const basepairs = [
+];
+  const coords = [
+    { x: 92.500, y: 65.500 },
+    { x: 86.454, y: 81.339 },
+    { x: 100.000, y: 91.534 },
+    { x: 113.546, y: 81.339 },
+    { x: 107.500, y: 65.500 }];
+]]>
+</script>
+</svg>
