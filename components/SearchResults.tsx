@@ -25,6 +25,7 @@ export const SearchResults: React.FC<Props> = ({ initialQuery, onNavigateHome, l
   
   // Get hints based on current language
   const hints = CONTENT[lang].search.hints;
+  const displayHints = hints.filter(h => h !== 'Filter by Affinity Level' && h !== '按亲和力等级筛选').slice(0, 3);
 
   useEffect(() => {
     // Auto focus the input when this view loads
@@ -150,13 +151,13 @@ export const SearchResults: React.FC<Props> = ({ initialQuery, onNavigateHome, l
                         : '输入靶标名称、基因符号或特定适配体序列，探索包含 18,000+ 条校准记录的数据库。'
                     }
                  </p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                    {hints.map((hint, idx) => (
-                        <button 
-                          key={idx}
-                          onClick={() => handleSuggestionClick(hint)}
-                          className="flex items-center gap-3 p-4 bg-white border border-academic-200 rounded hover:border-academic-400 hover:shadow-md transition-all group text-left"
-                        >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
+                   {displayHints.map((hint, idx) => (
+                       <button 
+                         key={idx}
+                         onClick={() => handleSuggestionClick(hint)}
+                         className="flex items-center gap-3 p-4 bg-white border border-academic-200 rounded hover:border-academic-400 hover:shadow-md transition-all group text-left"
+                       >
                             <div className="w-8 h-8 rounded bg-academic-50 text-academic-500 flex items-center justify-center group-hover:bg-academic-900 group-hover:text-white transition-colors">
                                 <SearchIcon className="w-4 h-4" />
                             </div>

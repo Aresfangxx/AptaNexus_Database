@@ -54,6 +54,15 @@ export const AptamerDetailPage: React.FC<Props> = ({ aptamerId, onBack }) => {
                     <h3 className="text-xs uppercase tracking-wider text-academic-500 font-semibold mb-1">Target</h3>
                     <div className="text-xl text-academic-800 font-medium">{record.target_name}</div>
                     <div className="text-sm text-academic-500">{record.target_type}</div>
+                    {record.gene_symbol ? (
+                      <div className="mt-1 inline-block px-2 py-0.5 bg-academic-100 text-academic-600 text-xs rounded font-medium font-mono">
+                        {record.gene_symbol}
+                      </div>
+                    ) : (record.id_type === 'PubChem CID' && record.external_name) ? (
+                      <div className="mt-1 inline-block px-2 py-0.5 bg-academic-100 text-academic-600 text-xs rounded font-medium">
+                        {record.external_name}
+                      </div>
+                    ) : null}
                 </div>
                 <div>
                     <h3 className="text-xs uppercase tracking-wider text-academic-500 font-semibold mb-1">Affinity (Kd)</h3>
@@ -84,6 +93,29 @@ export const AptamerDetailPage: React.FC<Props> = ({ aptamerId, onBack }) => {
                     <div className="text-sm text-academic-800 mt-1">{record.buffer_condition || 'Not specified'}</div>
                 </div>
                 {/* Add more fields if available in JSON */}
+            </div>
+         </div>
+
+         {/* Secondary Structure */}
+         <div className="bg-white border border-academic-200 rounded-lg p-6">
+            <h3 className="font-serif text-lg text-academic-900 mb-4 pb-2 border-b border-academic-100">Secondary Structure</h3>
+            <div className="space-y-4">
+               {record.secstr_image ? (
+                 <div className="rounded border border-academic-100 bg-academic-50 overflow-hidden">
+                    <img src={`/${record.secstr_image}`} alt={`${record.sequence_id} secondary structure`} className="w-full h-auto" />
+                 </div>
+               ) : (
+                 <div className="text-sm text-academic-500">Not available</div>
+               )}
+
+               <div>
+                 <div className="text-xs text-academic-500 uppercase">Dot-Bracket</div>
+                 <div className="mt-1 bg-academic-50 border border-academic-200 rounded p-3 font-mono text-sm text-academic-800 break-all">
+                   {record.secstr_dotbracket || 'Not specified'}
+                 </div>
+               </div>
+
+               <div className="text-sm text-academic-700">MFE: {record.mfe !== undefined ? record.mfe : 'Not specified'}</div>
             </div>
          </div>
 

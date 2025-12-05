@@ -59,6 +59,9 @@ export interface AptamerRecord {
   // Aptamer Info
   sequence_id: string; // Author's name
   aptamer_sequence: string;
+  secstr_image?: string;
+  secstr_dotbracket?: string;
+  mfe?: number;
 
   // Affinity
   pKd?: number; // Can be null/undefined

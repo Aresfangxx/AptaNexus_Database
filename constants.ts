@@ -18,7 +18,7 @@ export const CONTENT: Record<Language, ContentText> = {
     },
     mission: {
       title: "A new foundation for aptamer science",
-      body: "This database integrates over 18,000 curated records, 14,000+ sequences, and 2,383 unique targets mined from 25,000 publications spanning 2005–2025. It is designed to be both scientifically rigorous and AI-ready, supporting sequence analysis, target profiling, affinity benchmarking, and future computational design."
+      body: "This database integrates over 17,000 curated records, 6769 Affinity-validated sequences, and 2,300+ unique targets mined from 23,000 publications spanning 2005–2025. It is designed to be both scientifically rigorous and AI-ready, supporting sequence analysis, target profiling, affinity benchmarking, and future computational design."
     },
     search: {
       title: "Start Exploring Aptamers",
@@ -28,11 +28,11 @@ export const CONTENT: Record<Language, ContentText> = {
     },
     stats: {
       items: [
-        { value: "14,916", label: "Sequences" },
-        { value: "2,383", label: "Unique Targets" },
-        { value: "7,143", label: "Affinity-validated" },
-        { value: "18,677", label: "Curated Records" },
-        { value: "20 Years", label: "Literature Coverage" },
+        { value: "23000+", label: "Publications" },
+        { value: "2361", label: "Unique Targets" },
+        { value: "17,563", label: "Curated Records" },
+        { value: "6769", label: "Affinity-validated" },
+        { value: "20+ Years", label: "Literature Coverage" },
         { value: "AI + Human", label: "Verification Model" },
       ],
       footer: "We combine LLM-driven extraction with multi-stage human calibration to guarantee data accuracy and reproducibility."
@@ -80,11 +80,11 @@ export const CONTENT: Record<Language, ContentText> = {
     },
     stats: {
       items: [
-        { value: "14,916", label: "收录序列" },
-        { value: "2,383", label: "独立靶标" },
-        { value: "7,143", label: "亲和力验证" },
-        { value: "18,677", label: "清洗记录" },
-        { value: "20 年", label: "文献覆盖" },
+        { value: "23000+", label: "收录文献" },
+        { value: "2361", label: "独立靶标" },
+        { value: "17,563", label: "清洗后数据" },
+        { value: "6769", label: "亲和力验证" },
+        { value: "20+ 年", label: "文献覆盖" },
         { value: "AI + 人工", label: "双重校准" },
       ],
       footer: "由大模型抽取、经多阶段人工校准，保证数据准确性与可复现性。"

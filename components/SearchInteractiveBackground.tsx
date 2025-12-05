@@ -1,10 +1,9 @@
 
 import React, { useEffect, useRef } from 'react';
-
-const BASES = ['A', 'G', 'C', 'U'];
+const BASES = ['A','G','C','T','U'];
 
 interface Props {
-  isActive: boolean; // Controls rotation
+  isActive: boolean;
 }
 
 export const SearchInteractiveBackground: React.FC<Props> = ({ isActive }) => {
@@ -18,130 +17,83 @@ export const SearchInteractiveBackground: React.FC<Props> = ({ isActive }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // --- HIGH DPI SETUP ---
-    // Handle Retina/High-DPI displays for sharp rendering
     const updateSize = () => {
       const parent = canvas.parentElement;
-      if (!parent) return { width: window.innerWidth, height: 150 };
-
       const dpr = window.devicePixelRatio || 1;
-      const rect = parent.getBoundingClientRect();
-      
-      // Set the "actual" size in memory (scaled up)
+      const rect = parent ? parent.getBoundingClientRect() : { width: window.innerWidth, height: 160 } as DOMRect;
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-
-      // Set the "visible" size in CSS (standard)
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
-
-      // Scale the context so drawing operations use logical pixels
-      ctx.scale(dpr, dpr);
-
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return { width: rect.width, height: rect.height };
     };
 
     let { width, height } = updateSize();
 
-    // --- STRAND CONFIG ---
-    const strandLength = 40; // Number of bases
-    const amplitude = 20;
-    const frequency = 0.15;
-    const spacing = width / (strandLength + 5); 
-    const bases: string[] = [];
-    
-    // Generate random sequence once
-    for(let i=0; i<strandLength; i++) {
-       bases.push(BASES[Math.floor(Math.random() * BASES.length)]);
-    }
+    const strandLength = 40;
+    const amplitude = 22;
+    const perspective = 520;
+    let spacing = width / 42;
+    const tilt = 0;
+    const bases0 = Array.from({ length: strandLength }, (_, i) => BASES[i % BASES.length]);
+    const bases1 = Array.from({ length: strandLength }, (_, i) => BASES[(i + 2) % BASES.length]);
 
     const render = () => {
-      // Clear rect uses logical coordinates because of ctx.scale
       ctx.clearRect(0, 0, width, height);
-      
-      // Update rotation
-      if (isActive) {
-        rotationRef.current += 0.004; // Spin speed: 2x the idle speed
-      } else {
-        // Idle drift
-        rotationRef.current += 0.002;
+      rotationRef.current += isActive ? 0.008 : 0.003;
+      const centerY = height / 2;
+      const angle = rotationRef.current;
+
+      const points: { x: number; y: number; z: number; scale: number; strand: number; base: string }[] = [];
+      for (let s = 0; s < 2; s++) {
+        const phase = s === 0 ? 0 : Math.PI;
+        for (let i = 0; i < strandLength; i++) {
+          const x = (i + 2.5) * spacing;
+          const t = i * 0.14;
+          const theta = t * Math.PI * 2 + angle + phase;
+          const y3d = amplitude * Math.cos(theta) + Math.sin(theta * 0.5) * 6;
+          const z3d = amplitude * Math.sin(theta) + Math.sin(theta * 2) * 8 + (x - width / 2) * tilt * 200;
+          const scale = perspective / (perspective + z3d);
+          const y = centerY + y3d * scale;
+          const base = s === 0 ? bases0[i] : bases1[i];
+          points.push({ x, y, z: z3d, scale, strand: s, base });
+        }
       }
 
-      const centerY = height / 2;
-      const angleOffset = rotationRef.current;
+      points.sort((a, b) => a.z - b.z);
 
-      ctx.lineCap = 'round';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Draw Loop
-      for (let i = 0; i < strandLength; i++) {
-        const x = (i + 2.5) * spacing; // Center horizontally with some padding
-        
-        // Helix Math
-        const t = i * frequency;
-        const theta = t * Math.PI * 2 + angleOffset;
-        const r = amplitude;
-        
-        const y3d = r * Math.cos(theta);
-        const z3d = r * Math.sin(theta);
-        
-        // Project to 2D
-        const perspective = 500;
-        const scale = perspective / (perspective + z3d);
-        
-        const y2d = centerY + y3d * scale;
-        const x2d = x; 
-        
-        // Draw Backbone segment (connecting to previous)
-        if (i > 0) {
-           const prevT = (i - 1) * frequency;
-           const prevTheta = prevT * Math.PI * 2 + angleOffset;
-           const prevY3d = r * Math.cos(prevTheta);
-           const prevZ3d = r * Math.sin(prevTheta);
-           const prevScale = perspective / (perspective + prevZ3d);
-           const prevY2d = centerY + prevY3d * prevScale;
-           const prevX2d = (i - 1 + 2.5) * spacing;
-
-           ctx.beginPath();
-           ctx.strokeStyle = `rgba(108, 117, 125, ${0.3 + (scale - 0.5)})`; // Depth cueing alpha
-           ctx.lineWidth = 2 * scale;
-           ctx.moveTo(prevX2d, prevY2d);
-           ctx.lineTo(x2d, y2d);
-           ctx.stroke();
-        }
-
-        // Draw Base Stick
-        const stickLen = 15 * scale;
-        const tipY = y2d + (y2d < centerY ? 1 : -1) * stickLen; // Simple directional stick
-        
+      for (const p of points) {
+        const r = 3.2 * p.scale + 0.6;
+        const lightX = p.x + r * 0.4;
+        const lightY = p.y - r * 0.4;
+        const grad = ctx.createRadialGradient(lightX, lightY, r * 0.1, p.x, p.y, r);
+        grad.addColorStop(0, `rgba(255,255,255,${0.5 * p.scale})`);
+        grad.addColorStop(0.35, `rgba(173,181,189,${0.35})`);
+        grad.addColorStop(0.7, `rgba(108,117,125,${0.25})`);
+        grad.addColorStop(1, `rgba(52,58,64,${0.15})`);
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(108, 117, 125, ${0.3 + (scale - 0.5)})`;
-        ctx.lineWidth = 1 * scale;
-        ctx.moveTo(x2d, y2d);
-        ctx.lineTo(x2d, tipY);
-        ctx.stroke();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Draw Base Letter
-        ctx.fillStyle = `rgba(52, 58, 64, ${0.4 + (scale - 0.5)})`; // Dark gray
-        ctx.font = `600 ${10 * scale}px "Inter", monospace`;
-        ctx.fillText(bases[i], x2d, tipY + (y2d < centerY ? 12 : -12) * scale);
+        if (p.scale > 0.6) {
+          ctx.font = `${9 * p.scale}px Inter, monospace`;
+          ctx.fillStyle = `rgba(33,37,41,0.85)`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.base, p.x, p.y);
+        }
       }
 
       animationFrameRef.current = requestAnimationFrame(render);
     };
 
     const handleResize = () => {
-       const dims = updateSize();
-       width = dims.width;
-       height = dims.height;
-       // Re-calculate spacing if width changes significantly? 
-       // For now, let's keep spacing consistent or it might jump. 
-       // Ideally we re-calc spacing here but the 'spacing' var is const in closure.
-       // For a simple effect, scaling the context handles the visual resize mostly, 
-       // but the strand might get cut off or centered improperly if we don't update vars.
-       // Since this is a simple effect, we'll leave variables as is for performance, 
-       // as standard window resize refreshes components often anyway.
+      const dims = updateSize();
+      width = dims.width;
+      height = dims.height;
+      spacing = width / 42;
     };
 
     window.addEventListener('resize', handleResize);

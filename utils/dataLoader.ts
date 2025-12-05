@@ -52,6 +52,9 @@ async function loadRawData(): Promise<AptamerRecord[]> {
 
       sequence_id: raw["Sequence ID"] || "Unnamed",
       aptamer_sequence: raw["Aptamer sequence"] || "",
+      secstr_image: raw["SecStr_image"],
+      secstr_dotbracket: raw["SecStr_dotbracket"],
+      mfe: raw["MFE"] !== undefined ? Number(raw["MFE"]) : undefined,
 
       pKd: raw["pKd"] ? parseFloat(raw["pKd"]) : undefined,
       affinity: raw["Affinity"] || "",

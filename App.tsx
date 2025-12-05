@@ -235,13 +235,7 @@ export default function App() {
                 </button>
              </div>
              
-             <div className="mt-6 flex flex-wrap justify-center gap-3">
-               {t.search.buttons.slice(0, 3).map((btn, idx) => (
-                 <button key={idx} onClick={handleNavigateSearch} className="text-sm px-4 py-2 bg-white border border-academic-200 rounded text-academic-600 hover:border-academic-400 hover:text-academic-900 hover:bg-academic-50 transition-all hover:-translate-y-0.5 shadow-sm hover:shadow">
-                   {btn}
-                 </button>
-               ))}
-             </div>
+             <div className="mt-6 flex flex-wrap justify-center gap-3"></div>
           </div>
         </section>
 
