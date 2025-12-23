@@ -2,8 +2,9 @@ import http from 'http';
 import url from 'url';
 import { loadJSONL } from './loader.js';
 import { searchByTarget, getByDoi, listTargets, getByExternalId, topByPkd } from './search.js';
+import { AptamerRecord } from './schema.js';
 
-const data = loadJSONL();
+let data: AptamerRecord[] = [];
 const port = Number(process.env.PORT || 3333);
 
 const server = http.createServer((req, res) => {
@@ -51,6 +52,17 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(port, () => {
-  process.stdout.write(JSON.stringify({ http_port: port }) + '\n');
+async function main() {
+  console.error('Loading aptamer data...');
+  data = await loadJSONL();
+  console.error(`Loaded ${data.length} aptamer records`);
+
+  server.listen(port, () => {
+    process.stdout.write(JSON.stringify({ http_port: port }) + '\n');
+  });
+}
+
+main().catch((error) => {
+  console.error('Server error:', error);
+  process.exit(1);
 });

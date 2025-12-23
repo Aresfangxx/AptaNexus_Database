@@ -6,8 +6,9 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { loadJSONL } from './loader.js';
 import { searchByTarget, getByDoi, listTargets, getByExternalId, topByPkd } from './search.js';
+import { AptamerRecord } from './schema.js';
 
-const data = loadJSONL();
+let data: AptamerRecord[] = [];
 
 const server = new Server(
   {
@@ -184,6 +185,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
+  // Load data from environment variable or default path
+  console.error('Loading aptamer data...');
+  data = await loadJSONL();
+  console.error(`Loaded ${data.length} aptamer records`);
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Aptamer DB MCP server running on stdio');

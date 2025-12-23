@@ -1,14 +1,42 @@
 {
   "name": "aptamer-mcp-server",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.3",
+  "description": "MCP server for querying aptamer database with 11,735+ records. Cloud-based data loading from Vercel CDN.",
   "type": "module",
+  "main": "dist/src/index.js",
+  "bin": {
+    "aptamer-mcp-server": "bin/aptamer-mcp-server.js"
+  },
+  "files": [
+    "dist/src",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/src/index.js",
     "test": "node dist/tests/run-tests.js",
-    "http": "node dist/src/http.js"
+    "http": "node dist/src/http.js",
+    "prepublishOnly": "npm run build"
   },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "aptamer",
+    "bioinformatics",
+    "database",
+    "claude",
+    "ai"
+  ],
+  "author": "Aresfangxx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aresfangxx/Aptamer-Database.git",
+    "directory": "mcp-server"
+  },
+  "homepage": "https://aptamer-database.vercel.app",
   "devDependencies": {
     "@cfworker/json-schema": "^4.1.1",
     "@types/node": "^24.10.1",
@@ -16,5 +44,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
