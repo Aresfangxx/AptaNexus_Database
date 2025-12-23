@@ -18,7 +18,7 @@ export const CONTENT: Record<Language, ContentText> = {
     },
     mission: {
       title: "A new foundation for aptamer science",
-      body: "This database integrates over 17,000 curated records, 6769 Affinity-validated sequences, and 2,300+ unique targets mined from 23,000 publications spanning 2005–2025. It is designed to be both scientifically rigorous and AI-ready, supporting sequence analysis, target profiling, affinity benchmarking, and future computational design."
+      body: "This database integrates over 12,000 curated records, 4,800+ Affinity-validated sequences, and 1,900+ unique targets mined from 23,000 publications spanning 2005–2025. It is designed to be both scientifically rigorous and AI-ready, supporting sequence analysis, target profiling, affinity benchmarking, and future computational design."
     },
     search: {
       title: "Start Exploring Aptamers",
@@ -29,9 +29,9 @@ export const CONTENT: Record<Language, ContentText> = {
     stats: {
       items: [
         { value: "23000+", label: "Publications" },
-        { value: "2361", label: "Unique Targets" },
-        { value: "17,563", label: "Curated Records" },
-        { value: "6769", label: "Affinity-validated" },
+        { value: "1,900+", label: "Unique Targets" },
+        { value: "12,500+", label: "Curated Records" },
+        { value: "4815", label: "Affinity-validated" },
         { value: "20+ Years", label: "Literature Coverage" },
         { value: "AI + Human", label: "Verification Model" },
       ],
@@ -70,7 +70,7 @@ export const CONTENT: Record<Language, ContentText> = {
     },
     mission: {
       title: "适配体研究的新基础设施",
-      body: "数据库整合了 2005–2025 年间 25,000 篇文献中提取的 18,000+ 条记录，覆盖 14,000+ 序列与 2,383 个独立靶标。我们以最高标准进行清洗与校准，并实现完整的 AI-ready 结构，支持序列检索、靶标探索、亲和力分析与未来的计算设计。"
+      body: "数据库整合了 2005–2025 年间 25,000 篇文献中提取的 12000+ 条记录，覆盖 4800+亲和力验证的序列与 1900+ 个独立靶标。我们以最高标准进行清洗与校准，并实现完整的 AI-ready 结构，支持序列检索、靶标探索、亲和力分析与未来的计算设计。"
     },
     search: {
       title: "从序列、靶标或关键字开始探索…",
@@ -81,9 +81,9 @@ export const CONTENT: Record<Language, ContentText> = {
     stats: {
       items: [
         { value: "23000+", label: "收录文献" },
-        { value: "2361", label: "独立靶标" },
-        { value: "17,563", label: "清洗后数据" },
-        { value: "6769", label: "亲和力验证" },
+        { value: "1,900+", label: "独立靶标" },
+        { value: "12,500+", label: "清洗后数据" },
+        { value: "4815", label: "亲和力验证" },
         { value: "20+ 年", label: "文献覆盖" },
         { value: "AI + 人工", label: "双重校准" },
       ],
