@@ -1,32 +1,39 @@
 
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { TargetGroup, AptamerRecord } from '../types';
 import { fetchTargetByName } from '../utils/dataLoader';
 import { ArrowRight, StemLoopIcon, SearchIcon } from './Icons';
 
-interface Props {
-  targetName: string;
-  onNavigateAptamer: (id: string) => void;
-  onBack: () => void;
-}
-
-export const TargetDetailPage: React.FC<Props> = ({ targetName, onNavigateAptamer, onBack }) => {
+export const TargetDetailPage: React.FC = () => {
+  const { targetName } = useParams<{ targetName: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<TargetGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'All' | 'P' | 'A' | 'B' | 'C'>('All');
 
   useEffect(() => {
+    if (!targetName) return;
+
     setLoading(true);
-    fetchTargetByName(targetName).then((res) => {
+    fetchTargetByName(decodeURIComponent(targetName)).then((res) => {
       setData(res);
       setLoading(false);
-      
+
       // Auto-select best tab
       if (res && res.count_P > 0) setActiveTab('P');
       else if (res && res.count_A > 0) setActiveTab('A');
       else setActiveTab('All');
     });
   }, [targetName]);
+
+  const onNavigateAptamer = (id: string) => {
+    navigate(`/aptamer/${encodeURIComponent(id)}`);
+  };
+
+  const onBack = () => {
+    navigate('/search');
+  };
 
   if (loading) {
     return <div className="p-12 text-center text-academic-500 animate-pulse">Loading target data...</div>;

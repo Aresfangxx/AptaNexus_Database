@@ -1,25 +1,29 @@
 
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AptamerRecord } from '../types';
 import { fetchAptamerById } from '../utils/dataLoader';
 import { ArrowRight, StemLoopIcon } from './Icons';
 
-interface Props {
-  aptamerId: string;
-  onBack: () => void;
-}
-
-export const AptamerDetailPage: React.FC<Props> = ({ aptamerId, onBack }) => {
+export const AptamerDetailPage: React.FC = () => {
+  const { aptamerId } = useParams<{ aptamerId: string }>();
+  const navigate = useNavigate();
   const [record, setRecord] = useState<AptamerRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!aptamerId) return;
+
     setLoading(true);
-    fetchAptamerById(aptamerId).then(rec => {
+    fetchAptamerById(decodeURIComponent(aptamerId)).then(rec => {
         setRecord(rec);
         setLoading(false);
     });
   }, [aptamerId]);
+
+  const onBack = () => {
+    navigate(-1); // Go back to previous page
+  };
 
   if (loading) return <div className="p-12 text-center animate-pulse">Loading aptamer details...</div>;
   if (!record) return <div className="p-12 text-center">Record not found. <button onClick={onBack}>Back</button></div>;

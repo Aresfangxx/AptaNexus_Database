@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TargetGroup } from '../types';
 import { fetchAndProcessData } from '../utils/dataLoader';
 import { TargetCard } from './TargetCard';
@@ -9,23 +10,29 @@ import { CONTENT } from '../constants';
 import { Language } from '../types';
 
 interface Props {
-  initialQuery: string;
-  onNavigateHome: () => void;
   lang: Language;
-  onNavigateTarget: (targetName: string) => void;
-  onNavigateAptamer: (aptamerId: string) => void;
 }
 
-export const SearchResults: React.FC<Props> = ({ initialQuery, onNavigateHome, lang, onNavigateTarget, onNavigateAptamer }) => {
-  const [query, setQuery] = useState(initialQuery);
+export const SearchResults: React.FC<Props> = ({ lang }) => {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
   const [data, setData] = useState<TargetGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   // Get hints based on current language
   const hints = CONTENT[lang].search.hints;
   const displayHints = hints.filter(h => h !== 'Filter by Affinity Level' && h !== '按亲和力等级筛选').slice(0, 3);
+
+  // Navigation handlers using router
+  const onNavigateTarget = (targetName: string) => {
+    navigate(`/target/${encodeURIComponent(targetName)}`);
+  };
+
+  const onNavigateAptamer = (aptamerId: string) => {
+    navigate(`/aptamer/${encodeURIComponent(aptamerId)}`);
+  };
 
   useEffect(() => {
     // Auto focus the input when this view loads
@@ -147,8 +154,8 @@ export const SearchResults: React.FC<Props> = ({ initialQuery, onNavigateHome, l
                  </h2>
                  <p className="text-academic-500 max-w-lg text-center mb-10 font-light">
                     {lang === 'en' 
-                        ? 'Enter a target name, gene symbol, or specific aptamer sequence to explore our database of 18,000+ curated records.'
-                        : '输入靶标名称、基因符号或特定适配体序列，探索包含 18,000+ 条校准记录的数据库。'
+                        ? 'Enter a target name, gene symbol, or specific aptamer sequence to explore our database of 12,000+ curated records.'
+                        : '输入靶标名称、基因符号或特定适配体序列，探索包含 12,000+ 条校准记录的数据库。'
                     }
                  </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
