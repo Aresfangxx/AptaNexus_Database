@@ -1,0 +1,229 @@
+openapi: 3.0.0
+info:
+  title: AptaNexus Aptamer Database API
+  description: REST API for querying 12,000+ curated aptamer records with target information, affinity data, and sequences.
+  version: 1.0.0
+  contact:
+    name: AptaNexus
+    url: https://www.aptanexus.com
+servers:
+  - url: https://api.aptanexus.com
+    description: Production API server
+
+paths:
+  /search:
+    get:
+      summary: Search aptamers by target name
+      description: Search for aptamers targeting a specific molecule, protein, or cell type. Supports partial matching and Chinese queries.
+      operationId: searchAptamers
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Target name to search for (e.g., "thrombin", "VEGF", "乳酸")
+          schema:
+            type: string
+            example: thrombin
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 1000
+        - name: offset
+          in: query
+          required: false
+          description: Number of results to skip (for pagination)
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AptamerRecord'
+
+  /top:
+    get:
+      summary: Get top aptamers by affinity
+      description: Retrieve the aptamers with the highest binding affinity (lowest Kd) for a specific target.
+      operationId: getTopAptamers
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Target name to search for
+          schema:
+            type: string
+            example: thrombin
+        - name: n
+          in: query
+          required: false
+          description: Number of top aptamers to return
+          schema:
+            type: integer
+            default: 3
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AptamerRecord'
+
+  /bydoi:
+    get:
+      summary: Get aptamers by publication DOI
+      description: Retrieve all aptamers from a specific publication using its DOI.
+      operationId: getAptamersByDoi
+      parameters:
+        - name: doi
+          in: query
+          required: true
+          description: Digital Object Identifier of the publication
+          schema:
+            type: string
+            example: 10.1021/ja00000000
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AptamerRecord'
+
+  /byid:
+    get:
+      summary: Get aptamer by external ID
+      description: Retrieve a specific aptamer using its external identifier (e.g., Aptagen ID, PubChem CID).
+      operationId: getAptamerById
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: External identifier
+          schema:
+            type: string
+            example: B0YJF8
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AptamerRecord'
+
+  /targets:
+    get:
+      summary: List all target molecules
+      description: Get a list of all target molecules in the database with aptamer counts. Optionally filter by target name.
+      operationId: listTargets
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Optional filter by target name
+          schema:
+            type: string
+            example: thrombin
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetSummary'
+
+components:
+  schemas:
+    AptamerRecord:
+      type: object
+      properties:
+        sequence_id:
+          type: string
+          description: Unique identifier for the aptamer sequence
+          example: "APT-001"
+        aptamer_sequence:
+          type: string
+          description: Nucleotide sequence (DNA or RNA)
+          example: "GGTTGGTGTGGTTGG"
+        target_name:
+          type: string
+          description: Name of the target molecule
+          example: "Thrombin"
+        target_type:
+          type: string
+          description: Category of the target
+          example: "1. Proteins & Peptides"
+        affinity:
+          type: string
+          description: Binding affinity (Kd value)
+          example: "0.5 nM"
+        pKd:
+          type: number
+          description: Negative logarithm of Kd (higher is better)
+          example: 9.3
+        level:
+          type: string
+          description: Confidence level (P=High, A=Verified, B/C=Lower)
+          enum: [P, A, B, C]
+          example: "P"
+        best:
+          type: boolean
+          description: Whether this is the best aptamer for the target
+          example: true
+        year:
+          type: integer
+          description: Year of publication
+          example: 2023
+        doi:
+          type: string
+          description: DOI of the publication
+          example: "10.1021/ja00000000"
+        buffer_condition:
+          type: string
+          description: Experimental buffer conditions
+        gene_symbol:
+          type: string
+          description: Gene symbol (if applicable)
+          example: "F2"
+        external_id:
+          type: string
+          description: External database identifier
+        external_name:
+          type: string
+          description: External database name
+
+    TargetSummary:
+      type: object
+      properties:
+        target_name:
+          type: string
+          description: Name of the target molecule
+          example: "Thrombin"
+        count:
+          type: integer
+          description: Number of aptamers for this target
+          example: 42
+        target_type:
+          type: string
+          description: Category of the target
+          example: "1. Proteins & Peptides"

@@ -1,7 +1,7 @@
 import { toRecord, validateRecord, AptamerRecord } from './schema.js';
 
 // Default URL if not specified
-const DEFAULT_DATA_URL = 'https://aptamer-database.vercel.app/APTAMERS.jsonl';
+const DEFAULT_DATA_URL = 'https://www.aptanexus.com/APTAMERS.jsonl';
 
 export function resolveDataURL(): string {
   return process.env.APTAMERS_URL || DEFAULT_DATA_URL;

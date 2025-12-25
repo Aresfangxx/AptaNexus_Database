@@ -53,9 +53,9 @@ MCP 服务器从在线 URL 加载数据：
 
 ### 默认数据源
 
-不设置环境变量时，自动从官方 Vercel 部署加载：
+不设置环境变量时，自动从官方网站加载：
 ```
-https://aptamer-database.vercel.app/APTAMERS.jsonl
+https://www.aptanexus.com/APTAMERS.jsonl
 ```
 
 ### 自定义数据源（可选）

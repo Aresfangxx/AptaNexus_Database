@@ -9,7 +9,20 @@ const port = Number(process.env.PORT || 3333);
 
 const server = http.createServer((req, res) => {
   const parsed = url.parse(req.url || '', true);
+
+  // CORS headers for ChatGPT and other clients
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
   try {
     if (parsed.pathname === '/search') {
       const q = String(parsed.query.q || '');
