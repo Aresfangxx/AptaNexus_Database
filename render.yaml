@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: aptanexus-api
+    runtime: node
+    buildCommand: cd mcp-server && npm install && npm run build
+    startCommand: cd mcp-server && node dist/src/http.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.19.0
+      - key: PORT
+        value: 10000
