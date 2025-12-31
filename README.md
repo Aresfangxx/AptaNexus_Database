@@ -1,6 +1,6 @@
 # Aptamer MCP Server
 
-为 Claude Desktop 提供 MCP (Model Context Protocol) 工具，查询 11,735+ 条 aptamer 记录。数据从云端自动加载，无需本地存储。
+为 Claude Desktop 提供 MCP (Model Context Protocol) 工具，查询 12,000+ 条 aptamer 记录。数据从云端自动加载，无需本地存储。
 
 ## 快速开始 (推荐)
 
