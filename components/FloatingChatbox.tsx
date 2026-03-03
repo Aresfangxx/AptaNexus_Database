@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Language } from '../types';
 
-const API_BASE = 'https://aptanexus-api.onrender.com';
+const API_BASE = 'https://aptamer-database.onrender.com';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,7 +21,7 @@ const UI_TEXT = {
   cn: {
     title: 'AptaNexus AI 助手',
     placeholder: '询问适配体、靶标或序列…',
-    welcome: '您好！我可以帮您查询 AptaNexus 适配体数据库。试试这些问题：\n• "有哪些靶向凝血酶的适配体？"\n• "查找高亲和力VEGF适配体"\n• "列出研究最多的靶标"',
+    welcome: '您好！我可以帮您查询 AptaNexus 适配体数据库。试试这些问题：\n• "怎么检测苯丙氨酸？"\n• "我想要负载"\n• "列出研究最多的靶标"',
     tooltip: 'AI 助手',
     send: '发送',
     thinking: '正在检索数据库…',
