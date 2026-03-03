@@ -8,6 +8,7 @@ import { ParticleBackground } from './components/ParticleBackground';
 import { SearchResults } from './components/SearchResults';
 import { TargetDetailPage } from './components/TargetDetailPage';
 import { AptamerDetailPage } from './components/AptamerDetailPage';
+import { FloatingChatbox } from './components/FloatingChatbox';
 
 // Layout component for non-home pages
 const InnerPageLayout: React.FC<{ children: React.ReactNode; lang: Language; setLang: (lang: Language) => void }> = ({ children, lang, setLang }) => {
@@ -299,32 +300,35 @@ export default function App() {
   const [lang, setLang] = useState<Language>('en');
 
   return (
-    <Routes>
-      <Route path="/" element={<HomePage lang={lang} setLang={setLang} />} />
-      <Route
-        path="/search"
-        element={
-          <InnerPageLayout lang={lang} setLang={setLang}>
-            <SearchResults lang={lang} />
-          </InnerPageLayout>
-        }
-      />
-      <Route
-        path="/target/:targetName"
-        element={
-          <InnerPageLayout lang={lang} setLang={setLang}>
-            <TargetDetailPage />
-          </InnerPageLayout>
-        }
-      />
-      <Route
-        path="/aptamer/:aptamerId"
-        element={
-          <InnerPageLayout lang={lang} setLang={setLang}>
-            <AptamerDetailPage />
-          </InnerPageLayout>
-        }
-      />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<HomePage lang={lang} setLang={setLang} />} />
+        <Route
+          path="/search"
+          element={
+            <InnerPageLayout lang={lang} setLang={setLang}>
+              <SearchResults lang={lang} />
+            </InnerPageLayout>
+          }
+        />
+        <Route
+          path="/target/:targetName"
+          element={
+            <InnerPageLayout lang={lang} setLang={setLang}>
+              <TargetDetailPage />
+            </InnerPageLayout>
+          }
+        />
+        <Route
+          path="/aptamer/:aptamerId"
+          element={
+            <InnerPageLayout lang={lang} setLang={setLang}>
+              <AptamerDetailPage />
+            </InnerPageLayout>
+          }
+        />
+      </Routes>
+      <FloatingChatbox lang={lang} />
+    </>
   );
 }
