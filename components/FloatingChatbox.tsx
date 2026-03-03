@@ -31,6 +31,7 @@ const UI_TEXT = {
 export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   const t = UI_TEXT[lang];
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: t.welcome },
   ]);
@@ -135,12 +136,23 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {/* Chat panel */}
+    <>
+      {/* Backdrop when expanded */}
+      {isOpen && isExpanded && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40"
+          onClick={() => setIsExpanded(false)}
+        />
+      )}
+
+      {/* Chat panel - directly fixed-positioned */}
       {isOpen && (
         <div
-          className="flex flex-col bg-white rounded-2xl shadow-2xl border border-academic-200 overflow-hidden"
-          style={{ width: '380px', height: '520px' }}
+          className="fixed z-50 flex flex-col bg-white shadow-2xl border border-academic-200 overflow-hidden transition-all duration-200"
+          style={isExpanded
+            ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(760px, calc(100vw - 48px))', height: '80vh', borderRadius: '16px' }
+            : { bottom: '88px', right: '24px', width: '380px', height: '520px', borderRadius: '16px' }
+          }
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-academic-900 text-white flex-shrink-0">
@@ -148,13 +160,31 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
               <span className="text-lg">🧬</span>
               <span className="text-sm font-semibold tracking-wide">{t.title}</span>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-academic-300 hover:text-white transition-colors text-xl leading-none"
-              aria-label="Close"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Expand/collapse toggle */}
+              <button
+                onClick={() => setIsExpanded(prev => !prev)}
+                className="text-academic-300 hover:text-white transition-colors"
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+              >
+                {isExpanded ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={() => { setIsOpen(false); setIsExpanded(false); }}
+                className="text-academic-300 hover:text-white transition-colors text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -212,22 +242,24 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
       )}
 
       {/* Floating toggle button */}
-      <button
-        onClick={() => setIsOpen(prev => !prev)}
-        title={t.tooltip}
-        className="w-14 h-14 rounded-full bg-academic-900 hover:bg-academic-700 text-white shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-        aria-label={t.tooltip}
-      >
-        {isOpen ? (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        )}
-      </button>
-    </div>
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={() => setIsOpen((prev: boolean) => !prev)}
+          title={t.tooltip}
+          className="w-14 h-14 rounded-full bg-academic-900 hover:bg-academic-700 text-white shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          aria-label={t.tooltip}
+        >
+          {isOpen ? (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
   );
 };
