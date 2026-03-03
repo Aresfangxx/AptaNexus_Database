@@ -13,7 +13,7 @@ const UI_TEXT = {
   en: {
     title: 'AptaNexus AI Assistant',
     placeholder: 'Ask about aptamers, targets, sequences…',
-    welcome: 'Hello! I can help you search the AptaNexus aptamer database. Try asking:\n• "What aptamers target thrombin?"\n• "Show me high-affinity VEGF aptamers"\n• "List the most studied targets"',
+    welcome: 'Hello! I can help you search the AptaNexus aptamer database. Try asking:\n• "How to detect the phenylalanine?"\n• "How to target Nucleolin?"\n• "List the most studied targets"',
     tooltip: 'AI Assistant',
     send: 'Send',
     thinking: 'Searching database…',
@@ -21,7 +21,7 @@ const UI_TEXT = {
   cn: {
     title: 'AptaNexus AI 助手',
     placeholder: '询问适配体、靶标或序列…',
-    welcome: '您好！我可以帮您查询 AptaNexus 适配体数据库。试试这些问题：\n• "怎么检测苯丙氨酸？"\n• "我想要负载"\n• "列出研究最多的靶标"',
+    welcome: '您好！我可以帮您查询 AptaNexus 适配体数据库。试试这些问题：\n• "怎么检测苯丙氨酸？"\n• "我想要靶向Nucleolin传递药物"\n• "列出研究最多的靶标"',
     tooltip: 'AI 助手',
     send: '发送',
     thinking: '正在检索数据库…',
