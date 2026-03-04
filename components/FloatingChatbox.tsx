@@ -37,6 +37,7 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [toolStatus, setToolStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -99,8 +100,12 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
           const payload = line.slice(6).trim();
           if (payload === '[DONE]') break;
           try {
-            const { delta } = JSON.parse(payload) as { delta?: string };
+            const { delta, toolStatus: status } = JSON.parse(payload) as { delta?: string; toolStatus?: string };
+            if (status) {
+              setToolStatus(status);
+            }
             if (delta) {
+              setToolStatus('');
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
@@ -124,6 +129,7 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
       });
     } finally {
       setIsLoading(false);
+      setToolStatus('');
       textareaRef.current?.focus();
     }
   };
@@ -210,6 +216,17 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
                 </div>
               </div>
             ))}
+            {/* Tool status indicator */}
+            {toolStatus && (
+              <div className="flex justify-start">
+                <span className="text-xs text-academic-400 animate-pulse flex items-center gap-1">
+                  <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  {toolStatus}
+                </span>
+              </div>
+            )}
             {/* Blinking cursor while streaming */}
             {isLoading && messages[messages.length - 1]?.content !== '' && (
               <span className="text-academic-400 text-xs animate-pulse ml-1">▌</span>

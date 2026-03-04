@@ -94,10 +94,62 @@ const DEEPSEEK_TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'fetch_abstract',
+      description: 'Fetch the abstract of a paper using its DOI. Use this when the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details that are not available in the database records.',
+      parameters: {
+        type: 'object',
+        properties: {
+          doi: { type: 'string', description: 'DOI of the paper to fetch the abstract for' },
+        },
+        required: ['doi'],
+      },
+    },
+  },
 ];
 
+// --- Fetch paper abstract via CrossRef, fallback to PubMed ---
+async function fetchAbstract(doi: string): Promise<string> {
+  // Try CrossRef first
+  try {
+    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
+      headers: { 'User-Agent': 'AptaNexus/1.0 (mailto:aptanexus@proton.me)' },
+    });
+    if (res.ok) {
+      const json = await res.json() as { message?: { abstract?: string } };
+      const abstract = json.message?.abstract;
+      if (abstract) {
+        return abstract.replace(/<[^>]+>/g, '').trim();
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: PubMed E-utilities
+  try {
+    const searchRes = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(doi)}[doi]&retmode=json`
+    );
+    if (searchRes.ok) {
+      const searchJson = await searchRes.json() as { esearchresult?: { idlist?: string[] } };
+      const pmid = searchJson.esearchresult?.idlist?.[0];
+      if (pmid) {
+        const fetchRes = await fetch(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&rettype=abstract&retmode=text`
+        );
+        if (fetchRes.ok) {
+          return (await fetchRes.text()).trim();
+        }
+      }
+    }
+  } catch { /* fall through */ }
+
+  return 'Abstract not available for this DOI.';
+}
+
 // --- Execute a tool call locally ---
-function executeTool(data: AptamerRecord[], name: string, argsStr: string): unknown {
+async function executeTool(data: AptamerRecord[], name: string, argsStr: string): Promise<unknown> {
   let args: Record<string, unknown> = {};
   try { args = JSON.parse(argsStr); } catch { /* ignore */ }
   switch (name) {
@@ -111,6 +163,8 @@ function executeTool(data: AptamerRecord[], name: string, argsStr: string): unkn
       return listTargets(data, args.query ? String(args.query) : undefined);
     case 'get_by_external_id':
       return getByExternalId(data, String(args.id || ''));
+    case 'fetch_abstract':
+      return { abstract: await fetchAbstract(String(args.doi || '')) };
     default:
       return { error: `Unknown tool: ${name}` };
   }
@@ -136,6 +190,7 @@ async function handleChat(
 
 【工具使用规则】
 - 回答涉及具体适配体、靶标或文献时，必须先调用工具查询数据库，不得凭记忆回答。
+- 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，使用 fetch_abstract 工具获取该论文的摘要，再基于摘要内容回答，不得自行补充未经核实的信息。
 
 【输出格式规则——每条检索结果必须包含以下字段，缺一不可】
 - 文章标题
@@ -158,6 +213,7 @@ DOI：https://doi.org/10.1093/nar/gkg649
 
 TOOL USAGE RULES:
 - For any question about specific aptamers, targets, or literature, you MUST call the appropriate tool first. Never answer from memory.
+- If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results use fetch_abstract with the DOI to get the paper abstract before answering. Do not supplement with unverified information.
 
 OUTPUT FORMAT RULES — when presenting retrieved records, ALWAYS include ALL of the following fields (mark "N/A" if missing, never omit the field):
 - Article title
@@ -269,8 +325,12 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
 
     // Execute each tool and add results
     for (const tc of toolCalls) {
+      if (tc.name === 'fetch_abstract') {
+        const statusMsg = lang === 'cn' ? '正在通过 DOI 获取论文摘要…' : 'Fetching paper by DOI…';
+        res.write(`data: ${JSON.stringify({ toolStatus: statusMsg })}\n\n`);
+      }
       let result: unknown;
-      try { result = executeTool(data, tc.name, tc.arguments); }
+      try { result = await executeTool(data, tc.name, tc.arguments); }
       catch (err: unknown) { result = { error: String(err) }; }
       messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
     }
