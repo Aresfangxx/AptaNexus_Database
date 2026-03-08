@@ -153,8 +153,13 @@ async function executeTool(data: AptamerRecord[], name: string, argsStr: string)
   let args: Record<string, unknown> = {};
   try { args = JSON.parse(argsStr); } catch { /* ignore */ }
   switch (name) {
-    case 'search_by_target':
-      return searchByTarget(data, String(args.query || ''), Number(args.limit || 8), Number(args.offset || 0));
+    case 'search_by_target': {
+      const results = searchByTarget(data, String(args.query || ''), Number(args.limit || 8), Number(args.offset || 0));
+      if (results.length === 0) {
+        return { results: [], hint: "No results found. If the query is an abbreviation, common name, synonym, or non-English text, expand/translate to the full standard scientific name and call search_by_target again." };
+      }
+      return results;
+    }
     case 'top_by_pkd':
       return topByPkd(data, String(args.query || ''), Number(args.top || 3));
     case 'get_by_doi':
@@ -175,11 +180,26 @@ async function handleChat(
   data: AptamerRecord[],
   userMessages: { role: string; content: string }[],
   lang: string,
+  model: string,
   res: http.ServerResponse
 ) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  let apiUrl: string;
+  let apiKey: string;
+  let modelId: string;
+
+  if (model === 'doubao') {
+    apiUrl = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+    apiKey = process.env.ARK_API_KEY || '';
+    modelId = 'doubao-seed-2-0-pro-260215';
+  } else {
+    apiUrl = 'https://api.deepseek.com/chat/completions';
+    apiKey = process.env.DEEPSEEK_API_KEY || '';
+    modelId = 'deepseek-chat';
+  }
+
   if (!apiKey) {
-    res.write(`data: ${JSON.stringify({ delta: 'Error: DEEPSEEK_API_KEY is not configured on the server.' })}\n\n`);
+    const keyName = model === 'doubao' ? 'ARK_API_KEY' : 'DEEPSEEK_API_KEY';
+    res.write(`data: ${JSON.stringify({ delta: `Error: ${keyName} is not configured on the server.` })}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
     return;
@@ -242,14 +262,14 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     let deepseekRes: Response;
     try {
-      deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
+      deepseekRes = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: modelId,
           messages,
           tools: DEEPSEEK_TOOLS,
           stream: true,
@@ -575,11 +595,12 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     try {
       const body = await readBody(req);
-      const { messages: userMessages = [], lang = 'en' } = JSON.parse(body) as {
+      const { messages: userMessages = [], lang = 'en', model = 'deepseek' } = JSON.parse(body) as {
         messages?: { role: string; content: string }[];
         lang?: string;
+        model?: string;
       };
-      await handleChat(data, userMessages, lang, res);
+      await handleChat(data, userMessages, lang, model, res);
     } catch (err: unknown) {
       res.write(`data: ${JSON.stringify({ delta: `Server error: ${String(err)}` })}\n\n`);
       res.write('data: [DONE]\n\n');
