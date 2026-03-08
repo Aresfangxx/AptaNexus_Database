@@ -28,17 +28,10 @@ const UI_TEXT = {
   },
 };
 
-type ModelId = 'deepseek' | 'doubao';
-const MODELS: { id: ModelId; label: string }[] = [
-  { id: 'deepseek', label: 'DeepSeek' },
-  { id: 'doubao', label: 'Doubao' },
-];
-
 export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   const t = UI_TEXT[lang];
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [model, setModel] = useState<ModelId>('deepseek');
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: t.welcome },
   ]);
@@ -85,7 +78,7 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
       const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: historyForAPI, lang, model }),
+        body: JSON.stringify({ messages: historyForAPI, lang }),
       });
 
       if (!response.ok || !response.body) {
@@ -172,22 +165,6 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
             <div className="flex items-center gap-2">
               <span className="text-lg">🧬</span>
               <span className="text-sm font-semibold tracking-wide">{t.title}</span>
-              <div className="flex items-center gap-1 ml-2">
-                {MODELS.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setModel(m.id)}
-                    disabled={isLoading}
-                    className={`text-xs px-2 py-0.5 rounded transition-colors ${
-                      model === m.id
-                        ? 'bg-white text-academic-900 font-semibold'
-                        : 'text-academic-400 hover:text-white'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
             </div>
             <div className="flex items-center gap-2">
               {/* Expand/collapse toggle */}

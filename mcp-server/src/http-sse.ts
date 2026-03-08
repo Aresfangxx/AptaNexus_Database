@@ -175,35 +175,33 @@ async function executeTool(data: AptamerRecord[], name: string, argsStr: string)
   }
 }
 
-// --- /chat endpoint handler with DeepSeek streaming + tool-use loop ---
+const PRIMARY_API = {
+  url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+  key: () => process.env.ARK_API_KEY || '',
+  model: 'doubao-seed-2-0-pro-260215',
+};
+const FALLBACK_API = {
+  url: 'https://api.deepseek.com/chat/completions',
+  key: () => process.env.DEEPSEEK_API_KEY || '',
+  model: 'deepseek-chat',
+};
+
+// --- /chat endpoint handler with streaming + tool-use loop ---
 async function handleChat(
   data: AptamerRecord[],
   userMessages: { role: string; content: string }[],
   lang: string,
-  model: string,
   res: http.ServerResponse
 ) {
-  let apiUrl: string;
-  let apiKey: string;
-  let modelId: string;
-
-  if (model === 'doubao') {
-    apiUrl = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-    apiKey = process.env.ARK_API_KEY || '';
-    modelId = 'doubao-seed-2-0-pro-260215';
-  } else {
-    apiUrl = 'https://api.deepseek.com/chat/completions';
-    apiKey = process.env.DEEPSEEK_API_KEY || '';
-    modelId = 'deepseek-chat';
-  }
-
-  if (!apiKey) {
-    const keyName = model === 'doubao' ? 'ARK_API_KEY' : 'DEEPSEEK_API_KEY';
-    res.write(`data: ${JSON.stringify({ delta: `Error: ${keyName} is not configured on the server.` })}\n\n`);
+  if (!PRIMARY_API.key() && !FALLBACK_API.key()) {
+    res.write(`data: ${JSON.stringify({ delta: 'Error: No API key configured on the server.' })}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
     return;
   }
+
+  // Start with primary (Doubao), may fall back to DeepSeek on first failure
+  let activeApi = PRIMARY_API.key() ? PRIMARY_API : FALLBACK_API;
 
   const systemPrompt = lang === 'cn'
     ? `你是AptaNexus的AI助手，专门帮助用户查询适配体（Aptamer）数据库。数据库包含超过12500条记录，涵盖1900多种靶标。
@@ -260,34 +258,65 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
 
   const MAX_ITERATIONS = 5;
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    let deepseekRes: Response;
+    let apiRes: Response | undefined;
     try {
-      deepseekRes = await fetch(apiUrl, {
+      apiRes = await fetch(activeApi.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${activeApi.key()}`,
         },
         body: JSON.stringify({
-          model: modelId,
+          model: activeApi.model,
           messages,
           tools: DEEPSEEK_TOOLS,
           stream: true,
         }),
       });
     } catch (err: unknown) {
-      res.write(`data: ${JSON.stringify({ delta: `Error calling DeepSeek API: ${String(err)}` })}\n\n`);
-      break;
+      // Primary failed on first call — try fallback
+      if (i === 0 && activeApi === PRIMARY_API && FALLBACK_API.key()) {
+        activeApi = FALLBACK_API;
+        try {
+          apiRes = await fetch(activeApi.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeApi.key()}` },
+            body: JSON.stringify({ model: activeApi.model, messages, tools: DEEPSEEK_TOOLS, stream: true }),
+          });
+        } catch (err2: unknown) {
+          res.write(`data: ${JSON.stringify({ delta: `API error: ${String(err2)}` })}\n\n`);
+          break;
+        }
+      } else {
+        res.write(`data: ${JSON.stringify({ delta: `API error: ${String(err)}` })}\n\n`);
+        break;
+      }
     }
 
-    if (!deepseekRes.ok) {
-      const errText = await deepseekRes.text();
-      res.write(`data: ${JSON.stringify({ delta: `DeepSeek API error ${deepseekRes.status}: ${errText}` })}\n\n`);
-      break;
+    if (!apiRes || !apiRes.ok) {
+      // Primary returned error on first call — try fallback
+      if (i === 0 && activeApi === PRIMARY_API && FALLBACK_API.key()) {
+        activeApi = FALLBACK_API;
+        try {
+          apiRes = await fetch(activeApi.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeApi.key()}` },
+            body: JSON.stringify({ model: activeApi.model, messages, tools: DEEPSEEK_TOOLS, stream: true }),
+          });
+        } catch (err: unknown) {
+          res.write(`data: ${JSON.stringify({ delta: `API error: ${String(err)}` })}\n\n`);
+          break;
+        }
+      }
+      if (!apiRes || !apiRes.ok) {
+        const errText = apiRes ? await apiRes.text() : 'No response';
+        res.write(`data: ${JSON.stringify({ delta: `API error ${apiRes?.status}: ${errText}` })}\n\n`);
+        break;
+      }
     }
 
     // Parse the streaming response
-    const reader = deepseekRes.body!.getReader();
+    const reader = apiRes.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
     let currentContent = '';
@@ -595,12 +624,11 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     try {
       const body = await readBody(req);
-      const { messages: userMessages = [], lang = 'en', model = 'deepseek' } = JSON.parse(body) as {
+      const { messages: userMessages = [], lang = 'en' } = JSON.parse(body) as {
         messages?: { role: string; content: string }[];
         lang?: string;
-        model?: string;
       };
-      await handleChat(data, userMessages, lang, model, res);
+      await handleChat(data, userMessages, lang, res);
     } catch (err: unknown) {
       res.write(`data: ${JSON.stringify({ delta: `Server error: ${String(err)}` })}\n\n`);
       res.write('data: [DONE]\n\n');
