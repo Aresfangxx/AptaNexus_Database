@@ -1,5 +1,5 @@
 import { AptamerRecord, SearchResult } from './schema.js';
-import { normalizeText, expandSynonyms } from './normalize.js';
+import { normalizeText } from './normalize.js';
 
 export function buildIndex(records: AptamerRecord[]): Map<string, AptamerRecord[]> {
   const idx = new Map<string, AptamerRecord[]>();
@@ -13,29 +13,24 @@ export function buildIndex(records: AptamerRecord[]): Map<string, AptamerRecord[
 }
 
 export function searchByTarget(records: AptamerRecord[], query: string, limit = 50, offset = 0): SearchResult[] {
-  const qlist = expandSynonyms(query);
+  const nq = normalizeText(query);
   const pool: SearchResult[] = [];
-  const nq = qlist[0] || normalizeText(query);
   for (const rec of records) {
     const t = normalizeText(rec.target_name);
     let matched = false;
     let score = 0;
     let strategy: SearchResult['match_strategy'] = 'token_overlap';
-    for (const q of qlist) {
-      if (t === q) {
-        matched = true; score = Math.max(score, 1.0); strategy = 'exact'; break;
-      }
-      if (!matched && t.includes(q)) {
-        matched = true; score = Math.max(score, 0.8); strategy = 'contains';
-      }
-    }
-    if (!matched) {
+    if (t === nq) {
+      matched = true; score = 1.0; strategy = 'exact';
+    } else if (t.includes(nq)) {
+      matched = true; score = 0.8; strategy = 'contains';
+    } else {
       const tt = new Set(t.split(' '));
       const qq = new Set(nq.split(' '));
       const inter = Array.from(qq).filter(w => tt.has(w));
       if (inter.length > 0) {
         matched = true;
-        score = Math.max(score, inter.length / Math.max(tt.size, 1));
+        score = inter.length / Math.max(tt.size, 1);
         strategy = 'token_overlap';
       }
     }

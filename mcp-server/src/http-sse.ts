@@ -202,7 +202,7 @@ async function handleChat(
 
 【工具使用规则】
 - 回答涉及具体适配体、靶标或文献时，必须先调用工具查询数据库，不得凭记忆回答。
-- 调用工具前，若用户输入为中文、缩写或俗名（如"苯丙氨酸"→"phenylalanine"、"phe"→"phenylalanine"、"苯丙氨酸"→"phenylalanine"、"lac"→"lactate"），在内部完成翻译/标准化后再调用，不得向用户确认。
+- 调用工具前，若用户输入为中文、缩写或俗名（如"苯丙氨酸"→"phenylalanine"、"phe"→"phenylalanine"、"乳酸"→"L-lactate"、"lac"→"L-lactate"），在内部完成翻译/标准化后再调用，不得向用户确认。
 - 当用户询问某靶标的适配体、检测方法或最佳适配体时，优先调用 top_by_pkd 获取亲和力最高的结果；仅当用户明确需要更多记录或 top_by_pkd 无结果时，再调用 search_by_target 补充。
 - 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，从结果中选择最相关的 1 篇论文，使用 fetch_abstract 工具获取其摘要，再基于摘要内容回答。每次回答最多调用 fetch_abstract 1 次，不得对多篇论文批量调用。
 
@@ -227,7 +227,7 @@ DOI：https://doi.org/10.1093/nar/gkg649
 
 TOOL USAGE RULES:
 - For any question about specific aptamers, targets, or literature, you MUST call the appropriate tool first. Never answer from memory.
-- Before calling any tool, if the user's input is in Chinese, an abbreviation, or a common name (e.g. "phe" → "phenylalanine", "苯丙氨酸" → "phenylalanine", "lac" → "lactate"), translate/normalize it to the standard English scientific name internally. Never ask the user to confirm.
+- Before calling any tool, if the user's input is in Chinese, an abbreviation, or a common name (e.g. "phe" → "phenylalanine", "苯丙氨酸" → "phenylalanine", "lac" → "L-lactate"), translate/normalize it to the standard English scientific name internally. Never ask the user to confirm.
 - When a user asks to find aptamers for a target, or asks about detection or the best aptamer, prefer calling top_by_pkd first to surface the highest-affinity aptamers. Fall back to search_by_target only when the user explicitly needs more records or top_by_pkd returns no results.
 - If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results pick the single most relevant paper and call fetch_abstract once with its DOI. Do not call fetch_abstract more than once per response. Do not supplement with unverified information.
 
