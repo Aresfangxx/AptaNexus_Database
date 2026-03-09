@@ -121,7 +121,8 @@ async function fetchAbstract(doi: string): Promise<string> {
       const json = await res.json() as { message?: { abstract?: string } };
       const abstract = json.message?.abstract;
       if (abstract) {
-        return abstract.replace(/<[^>]+>/g, '').trim();
+        const text = abstract.replace(/<[^>]+>/g, '').trim();
+        return text.length > 800 ? text.slice(0, 800) + '…' : text;
       }
     }
   } catch { /* fall through */ }
@@ -139,7 +140,8 @@ async function fetchAbstract(doi: string): Promise<string> {
           `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&rettype=abstract&retmode=text`
         );
         if (fetchRes.ok) {
-          return (await fetchRes.text()).trim();
+          const text = (await fetchRes.text()).trim();
+          return text.length > 800 ? text.slice(0, 800) + '…' : text;
         }
       }
     }
@@ -200,7 +202,7 @@ async function handleChat(
 
 【工具使用规则】
 - 回答涉及具体适配体、靶标或文献时，必须先调用工具查询数据库，不得凭记忆回答。
-- 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，使用 fetch_abstract 工具获取该论文的摘要，再基于摘要内容回答，不得自行补充未经核实的信息。
+- 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，从结果中选择最相关的 1 篇论文，使用 fetch_abstract 工具获取其摘要，再基于摘要内容回答。每次回答最多调用 fetch_abstract 1 次，不得对多篇论文批量调用。
 
 【输出格式规则——每条检索结果必须包含以下字段，缺一不可】
 - 文章标题
@@ -223,7 +225,7 @@ DOI：https://doi.org/10.1093/nar/gkg649
 
 TOOL USAGE RULES:
 - For any question about specific aptamers, targets, or literature, you MUST call the appropriate tool first. Never answer from memory.
-- If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results use fetch_abstract with the DOI to get the paper abstract before answering. Do not supplement with unverified information.
+- If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results pick the single most relevant paper and call fetch_abstract once with its DOI. Do not call fetch_abstract more than once per response. Do not supplement with unverified information.
 
 OUTPUT FORMAT RULES — when presenting retrieved records, ALWAYS include ALL of the following fields (mark "N/A" if missing, never omit the field):
 - Article title
