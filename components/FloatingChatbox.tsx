@@ -28,10 +28,12 @@ const UI_TEXT = {
   },
 };
 
+type ChatSize = 'normal' | 'expanded' | 'fullscreen';
+
 export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   const t = UI_TEXT[lang];
   const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [chatSize, setChatSize] = useState<ChatSize>('normal');
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: t.welcome },
   ]);
@@ -40,6 +42,7 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   const [toolStatus, setToolStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposing = useRef(false);
 
   // Update welcome message when language changes
   useEffect(() => {
@@ -135,7 +138,7 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) {
       e.preventDefault();
       handleSend();
     }
@@ -143,11 +146,11 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
 
   return (
     <>
-      {/* Backdrop when expanded */}
-      {isOpen && isExpanded && (
+      {/* Backdrop when expanded (not fullscreen) */}
+      {isOpen && chatSize === 'expanded' && (
         <div
           className="fixed inset-0 bg-black/40 z-40"
-          onClick={() => setIsExpanded(false)}
+          onClick={() => setChatSize('normal')}
         />
       )}
 
@@ -155,9 +158,12 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
       {isOpen && (
         <div
           className="fixed z-50 flex flex-col bg-white shadow-2xl border border-academic-200 overflow-hidden transition-all duration-200"
-          style={isExpanded
-            ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(760px, calc(100vw - 48px))', height: '80vh', borderRadius: '16px' }
-            : { bottom: '88px', right: '24px', width: '380px', height: '520px', borderRadius: '16px' }
+          style={
+            chatSize === 'fullscreen'
+              ? { top: 0, left: 0, width: '100vw', height: '100vh', borderRadius: 0 }
+              : chatSize === 'expanded'
+              ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'min(760px, calc(100vw - 48px))', height: '80vh', borderRadius: '16px' }
+              : { bottom: '88px', right: '24px', width: '380px', height: '520px', borderRadius: '16px' }
           }
         >
           {/* Header */}
@@ -167,24 +173,31 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
               <span className="text-sm font-semibold tracking-wide">{t.title}</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* Expand/collapse toggle */}
+              {/* Size cycle: normal → expanded → fullscreen → normal */}
               <button
-                onClick={() => setIsExpanded(prev => !prev)}
+                onClick={() => setChatSize((s: ChatSize) => s === 'normal' ? 'expanded' : s === 'expanded' ? 'fullscreen' : 'normal')}
                 className="text-academic-300 hover:text-white transition-colors"
-                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                aria-label={chatSize === 'normal' ? 'Expand' : chatSize === 'expanded' ? 'Fullscreen' : 'Collapse'}
               >
-                {isExpanded ? (
+                {chatSize === 'fullscreen' ? (
+                  /* collapse icon */
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
                   </svg>
+                ) : chatSize === 'expanded' ? (
+                  /* fullscreen icon */
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8V3m0 0h5M3 3l6 6M21 8V3m0 0h-5m5 0l-6 6M3 16v5m0 0h5m-5 0l6-6M21 16v5m0 0h-5m5 0l-6-6" />
+                  </svg>
                 ) : (
+                  /* expand icon */
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
                   </svg>
                 )}
               </button>
               <button
-                onClick={() => { setIsOpen(false); setIsExpanded(false); }}
+                onClick={() => { setIsOpen(false); setChatSize('normal'); }}
                 className="text-academic-300 hover:text-white transition-colors text-xl leading-none"
                 aria-label="Close"
               >
@@ -241,6 +254,8 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onCompositionStart={() => { isComposing.current = true; }}
+              onCompositionEnd={() => { isComposing.current = false; }}
               placeholder={t.placeholder}
               disabled={isLoading}
               rows={1}
