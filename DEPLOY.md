@@ -140,3 +140,14 @@ Find the top 5 aptamers for thrombin with the highest affinity
 1. 查看部署日志（Render/Railway 控制台）
 2. 在 GitHub 提 Issue
 3. 访问 https://www.aptanexus.com
+
+---
+
+## 相关文件
+
+| 文件 | 关系说明 |
+|------|--------|
+| [[AptaNexus_Database/README|README]] | 项目概览 |
+| [[AptaNexus_Database/CLAUDE|CLAUDE]] | 项目架构 |
+| [[AptaNexus_Database/mcp-server/README|MCP Server README]] | MCP 服务器文档 |
+| [[AptaNexus_Database/mcp-server/CHATGPT|CHATGPT]] | ChatGPT Actions 集成指南 |

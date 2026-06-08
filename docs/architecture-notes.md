@@ -131,3 +131,13 @@ The tool-augmented approach treats the LLM as an **intelligent query planner** o
 ---
 
 *Internal reference: [architecture-notes.md](architecture-notes.md) — raw implementation notes*
+
+---
+
+## 相关文件
+
+| 文件 | 关系说明 |
+|------|--------|
+| [[AptaNexus_Database/README|README]] | 项目概览 |
+| [[AptaNexus_Database/CLAUDE|CLAUDE]] | 项目架构说明 |
+| [[AptaNexus_Database/DEPLOY|DEPLOY]] | 部署指南 |

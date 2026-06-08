@@ -158,3 +158,13 @@ npm publish
 ## License
 
 MIT
+
+---
+
+## 相关文件
+
+| 文件 | 关系说明 |
+|------|--------|
+| [[AptaNexus_Database/mcp-server/CHATGPT|CHATGPT]] | ChatGPT Actions 集成 |
+| [[AptaNexus_Database/README|README]] | 项目主页 |
+| [[AptaNexus_Database/DEPLOY|DEPLOY]] | 部署指南 |

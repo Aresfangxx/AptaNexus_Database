@@ -1,14 +1,12 @@
 import http from 'http';
 import url from 'url';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { loadJSONL } from './loader.js';
 import { searchByTarget, getByDoi, listTargets, getByExternalId, topByPkd } from './search.js';
+import { createMcpServer } from './mcp.js';
+import { chatTools, executeTool } from './tools.js';
 import { AptamerRecord } from './schema.js';
+import { handleReport } from './report.js';
 
 // --- Helper: read full POST body ---
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -20,167 +18,13 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
-// --- DeepSeek tool definitions (mirrors MCP tools) ---
-const DEEPSEEK_TOOLS = [
-  {
-    type: 'function',
-    function: {
-      name: 'search_by_target',
-      description: 'Search for aptamers by target name. Supports partial matching and Chinese queries.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Target name to search for (e.g., "thrombin", "VEGF", "乳酸")' },
-          limit: { type: 'number', description: 'Maximum number of results to return (default: 8)' },
-          offset: { type: 'number', description: 'Number of results to skip' },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'top_by_pkd',
-      description: 'Get the top aptamers with the highest binding affinity (pKd) for a specific target.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Target name to search for' },
-          top: { type: 'number', description: 'Number of top aptamers to return (default: 3)' },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_by_doi',
-      description: 'Retrieve all aptamers from a specific publication using its DOI.',
-      parameters: {
-        type: 'object',
-        properties: {
-          doi: { type: 'string', description: 'Digital Object Identifier of the publication' },
-        },
-        required: ['doi'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_targets',
-      description: 'List all target molecules in the database with aptamer counts.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Optional filter by target name' },
-        },
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_by_external_id',
-      description: 'Retrieve a specific aptamer using its external identifier.',
-      parameters: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'External identifier' },
-        },
-        required: ['id'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'fetch_abstract',
-      description: 'Fetch the abstract of a paper using its DOI. Use this when the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details that are not available in the database records.',
-      parameters: {
-        type: 'object',
-        properties: {
-          doi: { type: 'string', description: 'DOI of the paper to fetch the abstract for' },
-        },
-        required: ['doi'],
-      },
-    },
-  },
-];
-
-// --- Fetch paper abstract via CrossRef, fallback to PubMed ---
-async function fetchAbstract(doi: string): Promise<string> {
-  // Try CrossRef first
-  try {
-    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
-      headers: { 'User-Agent': 'AptaNexus/1.0 (mailto:aptanexus@proton.me)' },
-    });
-    if (res.ok) {
-      const json = await res.json() as { message?: { abstract?: string } };
-      const abstract = json.message?.abstract;
-      if (abstract) {
-        const text = abstract.replace(/<[^>]+>/g, '').trim();
-        return text.length > 800 ? text.slice(0, 800) + '…' : text;
-      }
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: PubMed E-utilities
-  try {
-    const searchRes = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(doi)}[doi]&retmode=json`
-    );
-    if (searchRes.ok) {
-      const searchJson = await searchRes.json() as { esearchresult?: { idlist?: string[] } };
-      const pmid = searchJson.esearchresult?.idlist?.[0];
-      if (pmid) {
-        const fetchRes = await fetch(
-          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&rettype=abstract&retmode=text`
-        );
-        if (fetchRes.ok) {
-          const text = (await fetchRes.text()).trim();
-          return text.length > 800 ? text.slice(0, 800) + '…' : text;
-        }
-      }
-    }
-  } catch { /* fall through */ }
-
-  return 'Abstract not available for this DOI.';
-}
-
-// --- Execute a tool call locally ---
-async function executeTool(data: AptamerRecord[], name: string, argsStr: string): Promise<unknown> {
-  let args: Record<string, unknown> = {};
-  try { args = JSON.parse(argsStr); } catch { /* ignore */ }
-  switch (name) {
-    case 'search_by_target': {
-      const results = searchByTarget(data, String(args.query || ''), Number(args.limit || 8), Number(args.offset || 0));
-      if (results.length === 0) {
-        return { results: [], hint: "No results found. If the query is an abbreviation, common name, synonym, or non-English text, expand/translate to the full standard scientific name and call search_by_target again." };
-      }
-      return results;
-    }
-    case 'top_by_pkd':
-      return topByPkd(data, String(args.query || ''), Number(args.top || 3));
-    case 'get_by_doi':
-      return getByDoi(data, String(args.doi || ''));
-    case 'list_targets':
-      return listTargets(data, args.query ? String(args.query) : undefined);
-    case 'get_by_external_id':
-      return getByExternalId(data, String(args.id || ''));
-    case 'fetch_abstract':
-      return { abstract: await fetchAbstract(String(args.doi || '')) };
-    default:
-      return { error: `Unknown tool: ${name}` };
-  }
-}
-
+// OpenAI-compatible chat-completions provider. Defaults to Volcano Ark / Doubao;
+// override LLM_URL / LLM_API_KEY / LLM_MODEL to point at any compatible endpoint
+// (e.g. DeepSeek) without code changes.
 const DOUBAO_API = {
-  url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-  key: () => process.env.ARK_API_KEY || '',
-  model: 'doubao-seed-2-0-pro-260215',
+  url: process.env.LLM_URL || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+  key: () => process.env.LLM_API_KEY || process.env.ARK_API_KEY || '',
+  model: process.env.LLM_MODEL || 'doubao-seed-2-0-pro-260215',
 };
 
 // --- /chat endpoint handler with streaming + tool-use loop ---
@@ -206,22 +50,20 @@ async function handleChat(
 - 当用户询问某靶标的适配体、检测方法或最佳适配体时，优先调用 top_by_pkd 获取亲和力最高的结果；仅当用户明确需要更多记录或 top_by_pkd 无结果时，再调用 search_by_target 补充。
 - 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，从结果中选择最相关的 1 篇论文，使用 fetch_abstract 工具获取其摘要，再基于摘要内容回答。每次回答最多调用 fetch_abstract 1 次，不得对多篇论文批量调用。
 
-【输出格式规则——每条检索结果必须包含以下字段，缺一不可】
-- 文章标题
-- 期刊 / 年份
-- DOI 链接：https://doi.org/{doi}
-- 适配体序列（等宽格式）
-- 亲和力（如有 pKd 或 affinity 字段）
-- 靶标名称
+【输出格式规则——展示检索结果时】
+- 先用一两句话简要说明（解释 / 推荐 / 为什么），不要逐条复述字段。
+- 然后输出一个 \`\`\`aptamers 代码块，块内为 JSON 数组，每个元素是你要展示的一条记录，字段如下（值必须严格来自工具返回结果，不得编造或修改；缺失填 null）：sequence_id, target_name, sequence, affinity, pkd, doi, article_title, journal, year。
+- 这个 JSON 块会被前端渲染成卡片。因此在块的前后，叙述文字都不要再逐条复述这些记录的字段值（序列 / pKd / 亲和力 / DOI / 标题 等），也不要用表格或编号列表把这些记录再列一遍。叙述只做总体性说明或推荐（如"其中 Lac201 亲和力最高，适合血清检测"），具体数值交给卡片。
+- 一次回答只输出一个 \`\`\`aptamers 块，把要展示的记录都放进同一个数组。
+- 若本次回答不涉及具体记录（如列靶标、讲摘要、闲聊），正常用文字回答，不要输出该块。
 
-示例格式：
-**[序列ID]** 靶标：Thrombin
-序列：\`GGTTGGTGTGGTTGG\`
-亲和力：pKd = 8.2
-文章：*Selection of DNA aptamers...* — Nucleic Acids Res, 2003
-DOI：https://doi.org/10.1093/nar/gkg649
+示例：
+这是乳酸亲和力最高的适配体：
 
-如果工具返回的数据缺少某字段（如无 DOI），注明"暂无"，不得省略整条信息。
+\`\`\`aptamers
+[{"sequence_id":"Lac201","target_name":"L-lactate","sequence":"GACGACGAGTAGCGCGTATGAATGCTTTTCTATGGAGTC","affinity":"0.43 mM","pkd":3.37,"doi":"10.1002/anie.202212879","article_title":"Simultaneous Detection of L-lactate and D-glucose Using DNA Aptamers in Human Blood Serum","journal":"Angew Chem","year":"2023"}]
+\`\`\`
+
 如果问题与适配体数据库无关，礼貌引导回主题。`
     : `You are an expert AI assistant for AptaNexus, a comprehensive aptamer database with 12,500+ curated records across 1,900+ unique targets.
 
@@ -231,22 +73,20 @@ TOOL USAGE RULES:
 - When a user asks to find aptamers for a target, or asks about detection or the best aptamer, prefer calling top_by_pkd first to surface the highest-affinity aptamers. Fall back to search_by_target only when the user explicitly needs more records or top_by_pkd returns no results.
 - If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results pick the single most relevant paper and call fetch_abstract once with its DOI. Do not call fetch_abstract more than once per response. Do not supplement with unverified information.
 
-OUTPUT FORMAT RULES — when presenting retrieved records, ALWAYS include ALL of the following fields (mark "N/A" if missing, never omit the field):
-- Article title
-- Journal / Year
-- DOI link: https://doi.org/{doi}
-- Aptamer sequence (monospace)
-- Affinity (pKd or affinity string if available)
-- Target name
+OUTPUT FORMAT RULES — when presenting retrieved records:
+- First give a one or two sentence narrative (explanation / recommendation / why). Do NOT restate the fields one by one.
+- Then output a \`\`\`aptamers code block containing a JSON array; each element is one record you want to show, with these fields (values MUST come verbatim from the tool results — never invent or alter them; use null if missing): sequence_id, target_name, sequence, affinity, pkd, doi, article_title, journal, year.
+- The frontend renders this JSON block as cards. So neither before nor after the block should the prose restate per-record field values (sequence / pKd / affinity / DOI / title, etc.), and do NOT re-list these records as a table or numbered list. Keep the prose to overall commentary or a recommendation (e.g. "Lac201 has the highest affinity, best for serum detection"); leave the concrete values to the cards.
+- Emit at most one \`\`\`aptamers block per answer; put every record to show in that single array.
+- If the answer does not involve specific records (listing targets, discussing an abstract, chit-chat), just answer in prose and do not emit the block.
 
-Example format:
-**[Sequence ID]** Target: Thrombin
-Sequence: \`GGTTGGTGTGGTTGG\`
-Affinity: pKd = 8.2
-Article: *Selection of DNA aptamers...* — Nucleic Acids Res, 2003
-DOI: https://doi.org/10.1093/nar/gkg649
+Example:
+Here are the highest-affinity aptamers for lactate:
 
-If a field is absent in the tool result, write "N/A" — do not silently skip the entire record.
+\`\`\`aptamers
+[{"sequence_id":"Lac201","target_name":"L-lactate","sequence":"GACGACGAGTAGCGCGTATGAATGCTTTTCTATGGAGTC","affinity":"0.43 mM","pkd":3.37,"doi":"10.1002/anie.202212879","article_title":"Simultaneous Detection of L-lactate and D-glucose Using DNA Aptamers in Human Blood Serum","journal":"Angew Chem","year":"2023"}]
+\`\`\`
+
 If the query is unrelated to aptamers or the database, politely redirect.`;
 
   const messages: unknown[] = [
@@ -267,7 +107,7 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
         body: JSON.stringify({
           model: DOUBAO_API.model,
           messages,
-          tools: DEEPSEEK_TOOLS,
+          tools: chatTools,
           stream: true,
         }),
       });
@@ -345,12 +185,14 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
         const statusMsg = lang === 'cn' ? '正在通过 DOI 获取论文摘要…' : 'Fetching paper by DOI…';
         res.write(`data: ${JSON.stringify({ toolStatus: statusMsg })}\n\n`);
       }
+      let args: Record<string, unknown> = {};
+      try { args = JSON.parse(tc.arguments || '{}'); } catch { /* ignore */ }
       let result: unknown;
-      try { result = await executeTool(data, tc.name, tc.arguments); }
+      try { result = await executeTool(data, tc.name, args); }
       catch (err: unknown) { result = { error: String(err) }; }
       messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
     }
-    // Continue loop for DeepSeek to generate final answer
+    // Continue loop for the model to generate its final answer
   }
 
   res.write('data: [DONE]\n\n');
@@ -360,208 +202,14 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
 let data: AptamerRecord[] = [];
 const port = Number(process.env.PORT || 3333);
 
-// Create MCP server instance
-const mcpServer = new Server(
-  {
-    name: 'aptanexus-mcp',
-    version: '0.1.4',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
-// Register tool handlers
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: 'search_by_target',
-        description: 'Search for aptamers by target name. Supports partial matching and Chinese queries.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Target name to search for (e.g., "thrombin", "VEGF", "乳酸")',
-            },
-            limit: {
-              type: 'number',
-              description: 'Maximum number of results to return',
-              default: 50,
-            },
-            offset: {
-              type: 'number',
-              description: 'Number of results to skip (for pagination)',
-              default: 0,
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'top_by_pkd',
-        description: 'Get the top aptamers with the highest binding affinity (pKd) for a specific target.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Target name to search for',
-            },
-            top: {
-              type: 'number',
-              description: 'Number of top aptamers to return',
-              default: 3,
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'get_by_doi',
-        description: 'Retrieve all aptamers from a specific publication using its DOI.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            doi: {
-              type: 'string',
-              description: 'Digital Object Identifier of the publication',
-            },
-          },
-          required: ['doi'],
-        },
-      },
-      {
-        name: 'list_targets',
-        description: 'List all target molecules in the database with aptamer counts.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Optional filter by target name',
-            },
-          },
-        },
-      },
-      {
-        name: 'get_by_external_id',
-        description: 'Retrieve a specific aptamer using its external identifier (e.g., Aptagen ID).',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              description: 'External identifier',
-            },
-          },
-          required: ['id'],
-        },
-      },
-    ],
-  };
-});
-
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  try {
-    switch (name) {
-      case 'search_by_target': {
-        const query = String(args?.query || '');
-        const limit = Number(args?.limit || 50);
-        const offset = Number(args?.offset || 0);
-        const results = searchByTarget(data, query, limit, offset);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'top_by_pkd': {
-        const query = String(args?.query || '');
-        const top = Number(args?.top || 3);
-        const results = topByPkd(data, query, top);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_by_doi': {
-        const doi = String(args?.doi || '');
-        const results = getByDoi(data, doi);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_targets': {
-        const query = args?.query ? String(args.query) : undefined;
-        const results = listTargets(data, query);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_by_external_id': {
-        const id = String(args?.id || '');
-        const results = getByExternalId(data, id);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  } catch (error: any) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error: ${error.message}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
-
-// HTTP server with SSE endpoint
+// HTTP server: Streamable-HTTP MCP endpoint (/mcp) + /chat + legacy REST
 const server = http.createServer(async (req, res) => {
   const parsed = url.parse(req.url || '', true);
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Last-Event-ID');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -570,21 +218,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // MCP SSE endpoint
-  if (parsed.pathname === '/sse' && req.method === 'GET') {
-    console.error('New SSE connection established');
-    const transport = new SSEServerTransport('/message', res);
-    await mcpServer.connect(transport);
+  // MCP Streamable HTTP endpoint (replaces the deprecated /sse + /message pair).
+  // Stateless mode: one short-lived server+transport per request, which is a
+  // good fit for a read-only tool server behind Render.
+  if (parsed.pathname === '/mcp') {
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const parsedBody = body ? JSON.parse(body) : undefined;
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined, // stateless
+          enableJsonResponse: true,
+        });
+        const mcp = createMcpServer(() => data);
+        res.on('close', () => { transport.close(); mcp.close(); });
+        await mcp.connect(transport);
+        await transport.handleRequest(req, res, parsedBody);
+      } catch (err: unknown) {
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+        }
+        res.end(JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: `Internal error: ${String(err)}` },
+          id: null,
+        }));
+      }
+      return;
+    }
+    // GET (server-initiated stream) / DELETE (session teardown) are unused in
+    // stateless mode.
+    res.statusCode = 405;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Method not allowed; this server uses stateless POST /mcp.' },
+      id: null,
+    }));
     return;
   }
 
-  // MCP message endpoint
-  if (parsed.pathname === '/message' && req.method === 'POST') {
-    // This is handled by SSEServerTransport
-    return;
-  }
-
-  // Chat endpoint (DeepSeek + tool-use, streaming SSE)
+  // Chat endpoint (LLM + tool-use, streaming SSE)
   if (parsed.pathname === '/chat' && req.method === 'POST') {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -601,6 +276,13 @@ const server = http.createServer(async (req, res) => {
       res.write('data: [DONE]\n\n');
       res.end();
     }
+    return;
+  }
+
+  // Correction-report endpoint (emails the curation team via Resend)
+  if (parsed.pathname === '/report' && req.method === 'POST') {
+    const body = await readBody(req);
+    await handleReport(req, body, res);
     return;
   }
 
@@ -647,11 +329,12 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({
         status: 'ok',
         name: 'AptaNexus MCP Server',
-        version: '0.1.4',
+        version: '0.2.0',
         endpoints: {
-          mcp: '/sse',
+          mcp: '/mcp',
           chat: '/chat',
-          rest: ['/search', '/top', '/bydoi', '/targets', '/byid']
+          rest: ['/search', '/top', '/bydoi', '/targets', '/byid'],
+          report: '/report'
         },
         records: data.length
       }));
@@ -673,7 +356,7 @@ async function main() {
 
   server.listen(port, () => {
     console.error(`Server running on port ${port}`);
-    console.error(`MCP SSE endpoint: http://localhost:${port}/sse`);
+    console.error(`MCP endpoint (Streamable HTTP): http://localhost:${port}/mcp`);
     console.error(`REST API: http://localhost:${port}/search`);
     process.stdout.write(JSON.stringify({ http_port: port }) + '\n');
   });

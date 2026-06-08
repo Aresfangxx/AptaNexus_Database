@@ -220,3 +220,13 @@ response = openai.ChatCompletion.create(
 
 - GitHub Issues: https://github.com/Aresfangxx/Aptamer-Database/issues
 - 网站: https://www.aptanexus.com
+
+---
+
+## 相关文件
+
+| 文件 | 关系说明 |
+|------|--------|
+| [[AptaNexus_Database/mcp-server/README|MCP Server README]] | MCP 服务器文档 |
+| [[AptaNexus_Database/DEPLOY|DEPLOY]] | 部署指南 |
+| [[AptaNexus_Database/README|README]] | 项目主页 |

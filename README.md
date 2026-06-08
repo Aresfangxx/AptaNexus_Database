@@ -158,3 +158,14 @@ npm publish
 ## License
 
 MIT
+
+---
+
+## 相关文件
+
+| 文件 | 关系说明 |
+|------|--------|
+| [[AptaNexus_Database/CLAUDE|CLAUDE]] | 项目架构说明，Claude Code 开发参考 |
+| [[AptaNexus_Database/DEPLOY|DEPLOY]] | 部署指南 |
+| [[AptaNexus_Database/docs/architecture-notes|architecture-notes]] | 系统架构详解，Tool-Augmented LLM 设计 |
+| [[AptaNexus_Database/mcp-server/README|MCP Server README]] | MCP 服务器使用文档 |

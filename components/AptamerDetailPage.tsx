@@ -1,15 +1,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AptamerRecord } from '../types';
+import { AptamerRecord, Language } from '../types';
 import { fetchAptamerById } from '../utils/dataLoader';
 import { ArrowRight, StemLoopIcon } from './Icons';
+import { CONTENT } from '../constants';
+import { ReportForm } from './ReportForm';
 
-export const AptamerDetailPage: React.FC = () => {
+export const AptamerDetailPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const { aptamerId } = useParams<{ aptamerId: string }>();
   const navigate = useNavigate();
   const [record, setRecord] = useState<AptamerRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     if (!aptamerId) return;
@@ -30,9 +33,26 @@ export const AptamerDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-6 lg:px-12 py-12">
-      <button onClick={onBack} className="flex items-center text-sm text-academic-500 hover:text-academic-900 mb-8 transition-colors">
-        <ArrowRight className="w-4 h-4 mr-2 rotate-180" /> Back to List
-      </button>
+      <div className="flex items-center justify-between mb-8">
+        <button onClick={onBack} className="flex items-center text-sm text-academic-500 hover:text-academic-900 transition-colors">
+          <ArrowRight className="w-4 h-4 mr-2 rotate-180" /> Back to List
+        </button>
+        <button
+          onClick={() => setShowReport(true)}
+          className="flex items-center gap-1.5 text-sm text-academic-500 hover:text-academic-900 border border-academic-300 rounded-sm px-3 py-1.5 hover:bg-academic-50 transition-colors"
+        >
+          ⚐ {CONTENT[lang].report.cardButton}
+        </button>
+      </div>
+
+      {showReport && record && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 overflow-y-auto py-10 px-4" onClick={() => setShowReport(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-8 my-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="font-serif text-2xl text-academic-900 mb-6">{CONTENT[lang].report.formHeading}</h2>
+            <ReportForm mode="record" lang={lang} record={record} onClose={() => setShowReport(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Header Card */}
       <div className="bg-white border border-academic-200 rounded-lg p-8 shadow-sm mb-8 relative overflow-hidden">

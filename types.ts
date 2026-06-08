@@ -34,6 +34,37 @@ export interface ContentText {
   history: {
     items: { year: string; title: string }[];
   };
+  report: {
+    navLabel: string;
+    pageTitle: string;
+    pageSubtitle: string;
+    steps: { title: string; body: string }[];
+    scopeTitle: string;
+    scopeItems: string[];
+    formHeading: string;
+    labels: {
+      category: string;
+      whichFields: string;
+      currentValue: string;
+      suggestedValue: string;
+      reason: string;
+      reasonPlaceholder: string;
+      name: string;
+      email: string;
+      affiliation: string;
+      isAuthor: string;
+      recordLocator: string;
+      recordLocatorPlaceholder: string;
+      submit: string;
+      submitting: string;
+      requiredMark: string;
+    };
+    success: { title: string; body: string };
+    errorBody: string;
+    validation: { name: string; email: string; reason: string };
+    cardButton: string;
+    recordSummaryTitle: string;
+  };
 }
 
 // --- DATA STRUCTURES ---

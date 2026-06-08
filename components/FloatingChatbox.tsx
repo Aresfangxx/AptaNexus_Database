@@ -1,6 +1,38 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Language } from '../types';
+import { parseAssistantContent, AptamerCard } from './aptamerCards';
+
+// Compact markdown styling so tables / lists / headings render cleanly inside
+// the narrow chat bubble (the model uses GFM tables for things like target lists).
+const MD_COMPONENTS = {
+  p: (p: any) => <p className="my-1 leading-relaxed" {...p} />,
+  ul: (p: any) => <ul className="my-1 list-disc space-y-0.5 pl-4" {...p} />,
+  ol: (p: any) => <ol className="my-1 list-decimal space-y-0.5 pl-4" {...p} />,
+  strong: (p: any) => <strong className="font-semibold" {...p} />,
+  h1: (p: any) => <h3 className="mb-1 mt-2 text-sm font-semibold" {...p} />,
+  h2: (p: any) => <h3 className="mb-1 mt-2 text-sm font-semibold" {...p} />,
+  h3: (p: any) => <h3 className="mb-1 mt-2 text-sm font-semibold" {...p} />,
+  a: (p: any) => <a className="text-academic-700 underline break-all" target="_blank" rel="noreferrer" {...p} />,
+  code: (p: any) => <code className="rounded bg-academic-100 px-1 py-0.5 font-mono text-[11px]" {...p} />,
+  table: (p: any) => (
+    <div className="my-1 overflow-x-auto">
+      <table className="w-full border-collapse text-[11px]" {...p} />
+    </div>
+  ),
+  th: (p: any) => <th className="border border-academic-200 bg-academic-50 px-1.5 py-0.5 text-left font-semibold" {...p} />,
+  td: (p: any) => <td className="border border-academic-200 px-1.5 py-0.5" {...p} />,
+};
+
+const MarkdownText: React.FC<{ text: string }> = ({ text }) => (
+  <div className="break-words text-sm">
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
+      {text}
+    </ReactMarkdown>
+  </div>
+);
 
 const API_BASE = 'https://aptamer-database.onrender.com';
 
@@ -29,6 +61,76 @@ const UI_TEXT = {
 };
 
 type ChatSize = 'normal' | 'expanded' | 'fullscreen';
+
+const CARD_TEXT = {
+  en: { affinity: 'Affinity', preparing: 'Organizing results…' },
+  cn: { affinity: '亲和力', preparing: '整理结果中…' },
+};
+
+const AptamerCardList: React.FC<{ cards: AptamerCard[]; lang: Language }> = ({ cards, lang }) => {
+  if (cards.length === 0) return null;
+  const ct = CARD_TEXT[lang];
+  return (
+    <div className="mt-2 space-y-2">
+      {cards.map((c, i) => (
+        <div key={i} className="rounded-lg border border-academic-200 bg-white px-2.5 py-2 text-xs shadow-sm">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-semibold text-academic-900 break-all">{c.sequence_id || '—'}</span>
+            {c.target_name && <span className="shrink-0 text-academic-500">{c.target_name}</span>}
+          </div>
+          {c.sequence && (
+            <div className="mt-1 break-all rounded bg-academic-50 px-1.5 py-1 font-mono text-[11px] leading-snug text-academic-700">
+              {c.sequence}
+            </div>
+          )}
+          {(c.affinity || c.pkd != null) && (
+            <div className="mt-1 text-academic-600">
+              {ct.affinity}: {c.affinity}
+              {c.pkd != null ? `${c.affinity ? ' ' : ''}(pKd ${c.pkd})` : ''}
+            </div>
+          )}
+          {(c.article_title || c.journal || c.year) && (
+            <div className="mt-1 italic text-academic-500">
+              {c.article_title}
+              {c.journal || c.year ? ` — ${[c.journal, c.year].filter(Boolean).join(', ')}` : ''}
+            </div>
+          )}
+          {c.doi && (
+            <a
+              href={`https://doi.org/${c.doi}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block break-all text-academic-700 underline hover:text-academic-900"
+            >
+              https://doi.org/{c.doi}
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const AssistantContent: React.FC<{ content: string; lang: Language }> = ({ content, lang }) => {
+  const segments = parseAssistantContent(content);
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.kind === 'text') {
+          return <MarkdownText key={i} text={seg.text} />;
+        }
+        if (seg.kind === 'pending') {
+          return (
+            <span key={i} className="block animate-pulse text-xs text-academic-400">
+              {CARD_TEXT[lang].preparing}
+            </span>
+          );
+        }
+        return <AptamerCardList key={i} cards={seg.cards} lang={lang} />;
+      })}
+    </>
+  );
+};
 
 export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
   const t = UI_TEXT[lang];
@@ -220,7 +322,9 @@ export const FloatingChatbox: React.FC<{ lang: Language }> = ({ lang }) => {
                       : 'bg-academic-50 text-academic-900 border border-academic-200 rounded-bl-sm'
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === 'assistant'
+                    ? <AssistantContent content={msg.content} lang={lang} />
+                    : msg.content}
                   {msg.role === 'assistant' && idx === messages.length - 1 && isLoading && msg.content === '' && (
                     <span className="inline-flex items-center gap-1 text-academic-500 text-xs">
                       <span className="animate-pulse">{t.thinking}</span>
