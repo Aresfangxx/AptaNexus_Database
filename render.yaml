@@ -9,5 +9,13 @@ services:
         value: 18.19.0
       - key: PORT
         value: 10000
-      - key: DEEPSEEK_API_KEY
+      # The /chat endpoint reads ARK_API_KEY (Volcano Ark / Doubao).
+      - key: ARK_API_KEY
+        sync: false
+      # Correction-report email delivery (Resend HTTP API).
+      - key: RESEND_API_KEY
+        sync: false
+      - key: REPORT_TO_EMAIL
+        sync: false
+      - key: REPORT_FROM_EMAIL
         sync: false

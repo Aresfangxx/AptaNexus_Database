@@ -1,14 +1,12 @@
 import http from 'http';
 import url from 'url';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { loadJSONL } from './loader.js';
 import { searchByTarget, getByDoi, listTargets, getByExternalId, topByPkd } from './search.js';
+import { createMcpServer } from './mcp.js';
+import { chatTools, executeTool } from './tools.js';
 import { AptamerRecord } from './schema.js';
+import { handleReport } from './report.js';
 
 // --- Helper: read full POST body ---
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -18,163 +16,6 @@ function readBody(req: http.IncomingMessage): Promise<string> {
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
     req.on('error', reject);
   });
-}
-
-// --- DeepSeek tool definitions (mirrors MCP tools) ---
-const DEEPSEEK_TOOLS = [
-  {
-    type: 'function',
-    function: {
-      name: 'search_by_target',
-      description: 'Search for aptamers by target name. Supports partial matching and Chinese queries.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Target name to search for (e.g., "thrombin", "VEGF", "乳酸")' },
-          limit: { type: 'number', description: 'Maximum number of results to return (default: 8)' },
-          offset: { type: 'number', description: 'Number of results to skip' },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'top_by_pkd',
-      description: 'Get the top aptamers with the highest binding affinity (pKd) for a specific target.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Target name to search for' },
-          top: { type: 'number', description: 'Number of top aptamers to return (default: 3)' },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_by_doi',
-      description: 'Retrieve all aptamers from a specific publication using its DOI.',
-      parameters: {
-        type: 'object',
-        properties: {
-          doi: { type: 'string', description: 'Digital Object Identifier of the publication' },
-        },
-        required: ['doi'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_targets',
-      description: 'List all target molecules in the database with aptamer counts.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Optional filter by target name' },
-        },
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_by_external_id',
-      description: 'Retrieve a specific aptamer using its external identifier.',
-      parameters: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'External identifier' },
-        },
-        required: ['id'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'fetch_abstract',
-      description: 'Fetch the abstract of a paper using its DOI. Use this when the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details that are not available in the database records.',
-      parameters: {
-        type: 'object',
-        properties: {
-          doi: { type: 'string', description: 'DOI of the paper to fetch the abstract for' },
-        },
-        required: ['doi'],
-      },
-    },
-  },
-];
-
-// --- Fetch paper abstract via CrossRef, fallback to PubMed ---
-async function fetchAbstract(doi: string): Promise<string> {
-  // Try CrossRef first
-  try {
-    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
-      headers: { 'User-Agent': 'AptaNexus/1.0 (mailto:aptanexus@proton.me)' },
-    });
-    if (res.ok) {
-      const json = await res.json() as { message?: { abstract?: string } };
-      const abstract = json.message?.abstract;
-      if (abstract) {
-        const text = abstract.replace(/<[^>]+>/g, '').trim();
-        return text.length > 800 ? text.slice(0, 800) + '…' : text;
-      }
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: PubMed E-utilities
-  try {
-    const searchRes = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(doi)}[doi]&retmode=json`
-    );
-    if (searchRes.ok) {
-      const searchJson = await searchRes.json() as { esearchresult?: { idlist?: string[] } };
-      const pmid = searchJson.esearchresult?.idlist?.[0];
-      if (pmid) {
-        const fetchRes = await fetch(
-          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmid}&rettype=abstract&retmode=text`
-        );
-        if (fetchRes.ok) {
-          const text = (await fetchRes.text()).trim();
-          return text.length > 800 ? text.slice(0, 800) + '…' : text;
-        }
-      }
-    }
-  } catch { /* fall through */ }
-
-  return 'Abstract not available for this DOI.';
-}
-
-// --- Execute a tool call locally ---
-async function executeTool(data: AptamerRecord[], name: string, argsStr: string): Promise<unknown> {
-  let args: Record<string, unknown> = {};
-  try { args = JSON.parse(argsStr); } catch { /* ignore */ }
-  switch (name) {
-    case 'search_by_target': {
-      const results = searchByTarget(data, String(args.query || ''), Number(args.limit || 8), Number(args.offset || 0));
-      if (results.length === 0) {
-        return { results: [], hint: "No results found. If the query is an abbreviation, common name, synonym, or non-English text, expand/translate to the full standard scientific name and call search_by_target again." };
-      }
-      return results;
-    }
-    case 'top_by_pkd':
-      return topByPkd(data, String(args.query || ''), Number(args.top || 3));
-    case 'get_by_doi':
-      return getByDoi(data, String(args.doi || ''));
-    case 'list_targets':
-      return listTargets(data, args.query ? String(args.query) : undefined);
-    case 'get_by_external_id':
-      return getByExternalId(data, String(args.id || ''));
-    case 'fetch_abstract':
-      return { abstract: await fetchAbstract(String(args.doi || '')) };
-    default:
-      return { error: `Unknown tool: ${name}` };
-  }
 }
 
 const DOUBAO_API = {
@@ -267,7 +108,7 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
         body: JSON.stringify({
           model: DOUBAO_API.model,
           messages,
-          tools: DEEPSEEK_TOOLS,
+          tools: chatTools,
           stream: true,
         }),
       });
@@ -345,12 +186,14 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
         const statusMsg = lang === 'cn' ? '正在通过 DOI 获取论文摘要…' : 'Fetching paper by DOI…';
         res.write(`data: ${JSON.stringify({ toolStatus: statusMsg })}\n\n`);
       }
+      let args: Record<string, unknown> = {};
+      try { args = JSON.parse(tc.arguments || '{}'); } catch { /* ignore */ }
       let result: unknown;
-      try { result = await executeTool(data, tc.name, tc.arguments); }
+      try { result = await executeTool(data, tc.name, args); }
       catch (err: unknown) { result = { error: String(err) }; }
       messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
     }
-    // Continue loop for DeepSeek to generate final answer
+    // Continue loop for the model to generate its final answer
   }
 
   res.write('data: [DONE]\n\n');
@@ -360,208 +203,14 @@ If the query is unrelated to aptamers or the database, politely redirect.`;
 let data: AptamerRecord[] = [];
 const port = Number(process.env.PORT || 3333);
 
-// Create MCP server instance
-const mcpServer = new Server(
-  {
-    name: 'aptanexus-mcp',
-    version: '0.1.4',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
-// Register tool handlers
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: 'search_by_target',
-        description: 'Search for aptamers by target name. Supports partial matching and Chinese queries.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Target name to search for (e.g., "thrombin", "VEGF", "乳酸")',
-            },
-            limit: {
-              type: 'number',
-              description: 'Maximum number of results to return',
-              default: 50,
-            },
-            offset: {
-              type: 'number',
-              description: 'Number of results to skip (for pagination)',
-              default: 0,
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'top_by_pkd',
-        description: 'Get the top aptamers with the highest binding affinity (pKd) for a specific target.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Target name to search for',
-            },
-            top: {
-              type: 'number',
-              description: 'Number of top aptamers to return',
-              default: 3,
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'get_by_doi',
-        description: 'Retrieve all aptamers from a specific publication using its DOI.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            doi: {
-              type: 'string',
-              description: 'Digital Object Identifier of the publication',
-            },
-          },
-          required: ['doi'],
-        },
-      },
-      {
-        name: 'list_targets',
-        description: 'List all target molecules in the database with aptamer counts.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Optional filter by target name',
-            },
-          },
-        },
-      },
-      {
-        name: 'get_by_external_id',
-        description: 'Retrieve a specific aptamer using its external identifier (e.g., Aptagen ID).',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              description: 'External identifier',
-            },
-          },
-          required: ['id'],
-        },
-      },
-    ],
-  };
-});
-
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  try {
-    switch (name) {
-      case 'search_by_target': {
-        const query = String(args?.query || '');
-        const limit = Number(args?.limit || 50);
-        const offset = Number(args?.offset || 0);
-        const results = searchByTarget(data, query, limit, offset);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'top_by_pkd': {
-        const query = String(args?.query || '');
-        const top = Number(args?.top || 3);
-        const results = topByPkd(data, query, top);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_by_doi': {
-        const doi = String(args?.doi || '');
-        const results = getByDoi(data, doi);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_targets': {
-        const query = args?.query ? String(args.query) : undefined;
-        const results = listTargets(data, query);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_by_external_id': {
-        const id = String(args?.id || '');
-        const results = getByExternalId(data, id);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  } catch (error: any) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error: ${error.message}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
-
-// HTTP server with SSE endpoint
+// HTTP server: Streamable-HTTP MCP endpoint (/mcp) + /chat + legacy REST
 const server = http.createServer(async (req, res) => {
   const parsed = url.parse(req.url || '', true);
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Last-Event-ID');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -570,21 +219,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // MCP SSE endpoint
-  if (parsed.pathname === '/sse' && req.method === 'GET') {
-    console.error('New SSE connection established');
-    const transport = new SSEServerTransport('/message', res);
-    await mcpServer.connect(transport);
+  // MCP Streamable HTTP endpoint (replaces the deprecated /sse + /message pair).
+  // Stateless mode: one short-lived server+transport per request, which is a
+  // good fit for a read-only tool server behind Render.
+  if (parsed.pathname === '/mcp') {
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const parsedBody = body ? JSON.parse(body) : undefined;
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined, // stateless
+          enableJsonResponse: true,
+        });
+        const mcp = createMcpServer(() => data);
+        res.on('close', () => { transport.close(); mcp.close(); });
+        await mcp.connect(transport);
+        await transport.handleRequest(req, res, parsedBody);
+      } catch (err: unknown) {
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+        }
+        res.end(JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: `Internal error: ${String(err)}` },
+          id: null,
+        }));
+      }
+      return;
+    }
+    // GET (server-initiated stream) / DELETE (session teardown) are unused in
+    // stateless mode.
+    res.statusCode = 405;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Method not allowed; this server uses stateless POST /mcp.' },
+      id: null,
+    }));
     return;
   }
 
-  // MCP message endpoint
-  if (parsed.pathname === '/message' && req.method === 'POST') {
-    // This is handled by SSEServerTransport
-    return;
-  }
-
-  // Chat endpoint (DeepSeek + tool-use, streaming SSE)
+  // Chat endpoint (LLM + tool-use, streaming SSE)
   if (parsed.pathname === '/chat' && req.method === 'POST') {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -601,6 +277,13 @@ const server = http.createServer(async (req, res) => {
       res.write('data: [DONE]\n\n');
       res.end();
     }
+    return;
+  }
+
+  // Correction-report endpoint (emails the curation team via Resend)
+  if (parsed.pathname === '/report' && req.method === 'POST') {
+    const body = await readBody(req);
+    await handleReport(req, body, res);
     return;
   }
 
@@ -647,11 +330,12 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({
         status: 'ok',
         name: 'AptaNexus MCP Server',
-        version: '0.1.4',
+        version: '0.2.0',
         endpoints: {
-          mcp: '/sse',
+          mcp: '/mcp',
           chat: '/chat',
-          rest: ['/search', '/top', '/bydoi', '/targets', '/byid']
+          rest: ['/search', '/top', '/bydoi', '/targets', '/byid'],
+          report: '/report'
         },
         records: data.length
       }));
@@ -673,7 +357,7 @@ async function main() {
 
   server.listen(port, () => {
     console.error(`Server running on port ${port}`);
-    console.error(`MCP SSE endpoint: http://localhost:${port}/sse`);
+    console.error(`MCP endpoint (Streamable HTTP): http://localhost:${port}/mcp`);
     console.error(`REST API: http://localhost:${port}/search`);
     process.stdout.write(JSON.stringify({ http_port: port }) + '\n');
   });
