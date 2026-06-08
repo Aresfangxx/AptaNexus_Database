@@ -43,7 +43,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Target name to search for' },
-        top: { type: 'number', description: 'Number of top aptamers to return (default: 3)' },
+        top: { type: 'number', description: 'Number of top aptamers to return (default: 5)' },
       },
       required: ['query'],
     },
@@ -177,7 +177,7 @@ export async function executeTool(
       return results;
     }
     case 'top_by_pkd':
-      return topByPkd(data, String(args.query || ''), Number(args.top || 3));
+      return topByPkd(data, String(args.query || ''), Number(args.top || 5));
     case 'get_by_doi':
       return getByDoi(data, String(args.doi || ''));
     case 'list_targets':
