@@ -18,10 +18,13 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
+// OpenAI-compatible chat-completions provider. Defaults to Volcano Ark / Doubao;
+// override LLM_URL / LLM_API_KEY / LLM_MODEL to point at any compatible endpoint
+// (e.g. DeepSeek) without code changes.
 const DOUBAO_API = {
-  url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-  key: () => process.env.ARK_API_KEY || '',
-  model: 'doubao-seed-2-0-pro-260215',
+  url: process.env.LLM_URL || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+  key: () => process.env.LLM_API_KEY || process.env.ARK_API_KEY || '',
+  model: process.env.LLM_MODEL || 'doubao-seed-2-0-pro-260215',
 };
 
 // --- /chat endpoint handler with streaming + tool-use loop ---
@@ -47,22 +50,20 @@ async function handleChat(
 - 当用户询问某靶标的适配体、检测方法或最佳适配体时，优先调用 top_by_pkd 获取亲和力最高的结果；仅当用户明确需要更多记录或 top_by_pkd 无结果时，再调用 search_by_target 补充。
 - 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，从结果中选择最相关的 1 篇论文，使用 fetch_abstract 工具获取其摘要，再基于摘要内容回答。每次回答最多调用 fetch_abstract 1 次，不得对多篇论文批量调用。
 
-【输出格式规则——每条检索结果必须包含以下字段，缺一不可】
-- 文章标题
-- 期刊 / 年份
-- DOI 链接：https://doi.org/{doi}
-- 适配体序列（等宽格式）
-- 亲和力（如有 pKd 或 affinity 字段）
-- 靶标名称
+【输出格式规则——展示检索结果时】
+- 先用一两句话简要说明（解释 / 推荐 / 为什么），不要逐条复述字段。
+- 然后输出一个 \`\`\`aptamers 代码块，块内为 JSON 数组，每个元素是你要展示的一条记录，字段如下（值必须严格来自工具返回结果，不得编造或修改；缺失填 null）：sequence_id, target_name, sequence, affinity, pkd, doi, article_title, journal, year。
+- 这个 JSON 块会被前端渲染成卡片。因此在块的前后，叙述文字都不要再逐条复述这些记录的字段值（序列 / pKd / 亲和力 / DOI / 标题 等），也不要用表格或编号列表把这些记录再列一遍。叙述只做总体性说明或推荐（如"其中 Lac201 亲和力最高，适合血清检测"），具体数值交给卡片。
+- 一次回答只输出一个 \`\`\`aptamers 块，把要展示的记录都放进同一个数组。
+- 若本次回答不涉及具体记录（如列靶标、讲摘要、闲聊），正常用文字回答，不要输出该块。
 
-示例格式：
-**[序列ID]** 靶标：Thrombin
-序列：\`GGTTGGTGTGGTTGG\`
-亲和力：pKd = 8.2
-文章：*Selection of DNA aptamers...* — Nucleic Acids Res, 2003
-DOI：https://doi.org/10.1093/nar/gkg649
+示例：
+这是乳酸亲和力最高的适配体：
 
-如果工具返回的数据缺少某字段（如无 DOI），注明"暂无"，不得省略整条信息。
+\`\`\`aptamers
+[{"sequence_id":"Lac201","target_name":"L-lactate","sequence":"GACGACGAGTAGCGCGTATGAATGCTTTTCTATGGAGTC","affinity":"0.43 mM","pkd":3.37,"doi":"10.1002/anie.202212879","article_title":"Simultaneous Detection of L-lactate and D-glucose Using DNA Aptamers in Human Blood Serum","journal":"Angew Chem","year":"2023"}]
+\`\`\`
+
 如果问题与适配体数据库无关，礼貌引导回主题。`
     : `You are an expert AI assistant for AptaNexus, a comprehensive aptamer database with 12,500+ curated records across 1,900+ unique targets.
 
@@ -72,22 +73,20 @@ TOOL USAGE RULES:
 - When a user asks to find aptamers for a target, or asks about detection or the best aptamer, prefer calling top_by_pkd first to surface the highest-affinity aptamers. Fall back to search_by_target only when the user explicitly needs more records or top_by_pkd returns no results.
 - If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results pick the single most relevant paper and call fetch_abstract once with its DOI. Do not call fetch_abstract more than once per response. Do not supplement with unverified information.
 
-OUTPUT FORMAT RULES — when presenting retrieved records, ALWAYS include ALL of the following fields (mark "N/A" if missing, never omit the field):
-- Article title
-- Journal / Year
-- DOI link: https://doi.org/{doi}
-- Aptamer sequence (monospace)
-- Affinity (pKd or affinity string if available)
-- Target name
+OUTPUT FORMAT RULES — when presenting retrieved records:
+- First give a one or two sentence narrative (explanation / recommendation / why). Do NOT restate the fields one by one.
+- Then output a \`\`\`aptamers code block containing a JSON array; each element is one record you want to show, with these fields (values MUST come verbatim from the tool results — never invent or alter them; use null if missing): sequence_id, target_name, sequence, affinity, pkd, doi, article_title, journal, year.
+- The frontend renders this JSON block as cards. So neither before nor after the block should the prose restate per-record field values (sequence / pKd / affinity / DOI / title, etc.), and do NOT re-list these records as a table or numbered list. Keep the prose to overall commentary or a recommendation (e.g. "Lac201 has the highest affinity, best for serum detection"); leave the concrete values to the cards.
+- Emit at most one \`\`\`aptamers block per answer; put every record to show in that single array.
+- If the answer does not involve specific records (listing targets, discussing an abstract, chit-chat), just answer in prose and do not emit the block.
 
-Example format:
-**[Sequence ID]** Target: Thrombin
-Sequence: \`GGTTGGTGTGGTTGG\`
-Affinity: pKd = 8.2
-Article: *Selection of DNA aptamers...* — Nucleic Acids Res, 2003
-DOI: https://doi.org/10.1093/nar/gkg649
+Example:
+Here are the highest-affinity aptamers for lactate:
 
-If a field is absent in the tool result, write "N/A" — do not silently skip the entire record.
+\`\`\`aptamers
+[{"sequence_id":"Lac201","target_name":"L-lactate","sequence":"GACGACGAGTAGCGCGTATGAATGCTTTTCTATGGAGTC","affinity":"0.43 mM","pkd":3.37,"doi":"10.1002/anie.202212879","article_title":"Simultaneous Detection of L-lactate and D-glucose Using DNA Aptamers in Human Blood Serum","journal":"Angew Chem","year":"2023"}]
+\`\`\`
+
 If the query is unrelated to aptamers or the database, politely redirect.`;
 
   const messages: unknown[] = [
