@@ -9,7 +9,18 @@ services:
         value: 18.19.0
       - key: PORT
         value: 10000
-      # The /chat endpoint reads ARK_API_KEY (Volcano Ark / Doubao).
+      # LLM provider for /chat. Defaults in code are Volcano Ark / Doubao; these
+      # override it to DeepSeek's OpenAI-compatible endpoint (fast "flash" model).
+      # Provider URL + model live here (version-controlled); only the key is a
+      # dashboard secret — set LLM_API_KEY in Render before this deploys, or /chat
+      # will fail auth.
+      - key: LLM_URL
+        value: https://api.deepseek.com/chat/completions
+      - key: LLM_MODEL
+        value: deepseek-v4-flash
+      - key: LLM_API_KEY
+        sync: false
+      # Legacy Doubao key (unused once LLM_API_KEY is set; kept as fallback).
       - key: ARK_API_KEY
         sync: false
       # Correction-report email delivery (Resend HTTP API).
