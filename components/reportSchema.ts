@@ -44,6 +44,7 @@ export interface ReportPayload {
   mode: 'record' | 'general';
   record?: { internal_id?: string; sequence_id?: string; target_name?: string; doi?: string };
   category: string;
+  locator?: string;
   corrections: CorrectionItem[];
   reason: string;
   reporter: ReportReporter;

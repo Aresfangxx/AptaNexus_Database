@@ -6,6 +6,7 @@ export interface ReportPayload {
   mode: 'record' | 'general';
   record?: { internal_id?: string; sequence_id?: string; target_name?: string; doi?: string };
   category?: string;
+  locator?: string; // general mode: free-text record locator (DOI / sequence name / target)
   corrections?: CorrectionItem[];
   reason: string;
   reporter: ReportReporter;
@@ -27,11 +28,12 @@ export function validateReport(p: any): { ok: true; value: ReportPayload } | { o
 }
 
 export function buildReportEmail(p: ReportPayload): { subject: string; text: string } {
-  const target = p.record?.target_name || (p.mode === 'record' ? 'record' : 'general');
+  const target = p.record?.target_name || (p.locator && p.locator.trim()) || (p.mode === 'record' ? 'record' : 'general');
   const subject = `[AptaNexus Correction] ${p.category || 'General'} – ${target}`;
   const lines: string[] = [];
   lines.push(`Mode: ${p.mode}`);
   lines.push(`Category: ${p.category || '(none)'}`);
+  if (p.locator && p.locator.trim()) lines.push(`Record locator: ${p.locator.trim()}`);
   if (p.record) {
     lines.push('', 'Record:');
     lines.push(`  internal_id: ${p.record.internal_id || ''}`);
@@ -70,6 +72,20 @@ export async function sendReportEmail(p: ReportPayload): Promise<void> {
   }
 }
 
+// Resolve the real client IP. On Render (and most PaaS) the Node server runs
+// behind a reverse proxy, so socket.remoteAddress is the proxy hop and would
+// make all reporters share one rate-limit bucket. Prefer the first
+// X-Forwarded-For address, falling back to the socket address.
+export function clientIp(req: http.IncomingMessage): string {
+  const xff = req.headers['x-forwarded-for'];
+  const raw = Array.isArray(xff) ? xff[0] : xff;
+  if (typeof raw === 'string' && raw.trim()) {
+    const first = raw.split(',')[0].trim();
+    if (first) return first;
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 const hits = new Map<string, number[]>();
@@ -92,7 +108,7 @@ export async function handleReport(req: http.IncomingMessage, bodyStr: string, r
     return;
   }
 
-  const ip = req.socket.remoteAddress || 'unknown';
+  const ip = clientIp(req);
   if (rateLimited(ip)) { res.statusCode = 429; res.end(JSON.stringify({ ok: false, error: 'too many requests' })); return; }
 
   const v = validateReport(body);

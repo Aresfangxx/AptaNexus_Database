@@ -54,6 +54,7 @@ export interface ContentText {
       affiliation: string;
       isAuthor: string;
       recordLocator: string;
+      recordLocatorPlaceholder: string;
       submit: string;
       submitting: string;
       requiredMark: string;

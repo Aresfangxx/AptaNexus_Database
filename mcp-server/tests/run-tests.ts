@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { loadJSONL } from '../src/loader.js';
 import { searchByTarget, getByDoi } from '../src/search.js';
-import { validateReport, buildReportEmail, rateLimited } from '../src/report.js';
+import { validateReport, buildReportEmail, rateLimited, clientIp } from '../src/report.js';
 
 // --- report.ts (pure, network-independent: run first) ---
 assert.ok(!validateReport(null).ok, 'report: null invalid');
@@ -18,6 +18,15 @@ assert.ok(reportEmail.text.includes('pKd') && reportEmail.text.includes('7.6'), 
 const rlNow = 1000;
 for (let i = 0; i < 5; i++) assert.ok(!rateLimited('ip-test', rlNow + i), 'report: within limit');
 assert.ok(rateLimited('ip-test', rlNow + 6), 'report: over limit blocked');
+
+// general-mode locator surfaces in the email subject + body
+const emLoc = buildReportEmail({ mode: 'general', locator: '10.1000/xyz', category: 'Literature', reason: 'wrong doi', reporter: { name: 'X', email: 'a@b.com', isOriginalAuthor: false }, lang: 'en' });
+assert.ok(emLoc.subject.includes('10.1000/xyz'), 'report: locator in subject');
+assert.ok(emLoc.text.includes('Record locator: 10.1000/xyz'), 'report: locator in body');
+
+// clientIp prefers X-Forwarded-For first hop, falls back to socket
+assert.strictEqual(clientIp({ headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' }, socket: { remoteAddress: '10.0.0.1' } } as any), '203.0.113.7', 'report: clientIp uses XFF first');
+assert.strictEqual(clientIp({ headers: {}, socket: { remoteAddress: '198.51.100.2' } } as any), '198.51.100.2', 'report: clientIp falls back to socket');
 
 process.stdout.write('report tests OK\n');
 

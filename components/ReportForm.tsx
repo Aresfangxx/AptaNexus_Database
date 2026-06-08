@@ -15,6 +15,7 @@ type Status = 'idle' | 'submitting' | 'success' | 'error';
 export const ReportForm: React.FC<ReportFormProps> = ({ mode, lang, record, onClose }) => {
   const t = CONTENT[lang].report;
   const [category, setCategory] = useState<string>(FIELD_GROUPS[0].key);
+  const [locator, setLocator] = useState('');
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [suggested, setSuggested] = useState<Record<string, string>>({});
   const [reason, setReason] = useState('');
@@ -37,6 +38,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({ mode, lang, record, onCl
       mode,
       record: record ? { internal_id: record.internal_id, sequence_id: record.sequence_id, target_name: record.target_name, doi: record.doi } : undefined,
       category,
+      locator: mode === 'general' ? (locator.trim() || undefined) : undefined,
       corrections,
       reason,
       reporter: { name, email, affiliation: affiliation || undefined, isOriginalAuthor: isAuthor },
@@ -85,6 +87,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({ mode, lang, record, onCl
         <div className="bg-academic-50 border border-academic-200 rounded-sm p-4 text-sm">
           <div className="text-xs uppercase tracking-wider text-academic-500 font-semibold mb-2">{t.recordSummaryTitle}</div>
           <div className="text-academic-800"><span className="font-medium">{record.sequence_id}</span> · {record.target_name}{record.doi ? ` · ${record.doi}` : ''}</div>
+        </div>
+      )}
+
+      {mode === 'general' && (
+        <div>
+          <label className={labelCls}>{t.labels.recordLocator}</label>
+          <input value={locator} onChange={e => setLocator(e.target.value)} placeholder={t.labels.recordLocatorPlaceholder} className={inputCls} />
         </div>
       )}
 
