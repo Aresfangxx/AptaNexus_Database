@@ -8,6 +8,7 @@ import { ParticleBackground } from './components/ParticleBackground';
 import { SearchResults } from './components/SearchResults';
 import { TargetDetailPage } from './components/TargetDetailPage';
 import { AptamerDetailPage } from './components/AptamerDetailPage';
+import { ReportPage } from './components/ReportPage';
 import { FloatingChatbox } from './components/FloatingChatbox';
 
 // Layout component for non-home pages
@@ -28,6 +29,7 @@ const InnerPageLayout: React.FC<{ children: React.ReactNode; lang: Language; set
             {lang === 'en' ? '中文' : 'EN'}
           </button>
           <Link to="/" className="text-sm font-medium text-academic-600 hover:text-academic-900">Home</Link>
+          <Link to="/report" className="text-sm font-medium text-academic-600 hover:text-academic-900">{CONTENT[lang].report.navLabel}</Link>
 
         </div>
       </nav>
@@ -69,6 +71,12 @@ const HomePage: React.FC<{ lang: Language; setLang: (lang: Language) => void }> 
             <a href="#about" className="hover:text-academic-900 transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-academic-900 after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left">About</a>
             <a href="#data" className="hover:text-academic-900 transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-academic-900 after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left">Data</a>
             <a href="#api" className="hover:text-academic-900 transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-academic-900 after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left">API</a>
+            <Link
+              to="/report"
+              className="hover:text-academic-900 transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-[-4px] after:left-0 after:bg-academic-900 after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+            >
+              {CONTENT[lang].report.navLabel}
+            </Link>
 
           </div>
           <button
@@ -323,7 +331,15 @@ export default function App() {
           path="/aptamer/:aptamerId"
           element={
             <InnerPageLayout lang={lang} setLang={setLang}>
-              <AptamerDetailPage />
+              <AptamerDetailPage lang={lang} />
+            </InnerPageLayout>
+          }
+        />
+        <Route
+          path="/report"
+          element={
+            <InnerPageLayout lang={lang} setLang={setLang}>
+              <ReportPage lang={lang} />
             </InnerPageLayout>
           }
         />
