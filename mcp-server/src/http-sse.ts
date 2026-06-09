@@ -47,8 +47,8 @@ async function handleChat(
 【工具使用规则】
 - 回答涉及具体适配体、靶标或文献时，必须先调用工具查询数据库，不得凭记忆回答。
 - 调用工具前，若用户输入为中文、缩写或俗名（如"苯丙氨酸"→"phenylalanine"、"phe"→"phenylalanine"、"乳酸"→"L-lactate"、"lac"→"L-lactate"），在内部完成翻译/标准化后再调用，不得向用户确认。
-- 当用户询问某靶标的适配体、检测方法或最佳适配体时，优先调用 top_by_pkd 获取亲和力最高的结果；仅当用户明确需要更多记录或 top_by_pkd 无结果时，再调用 search_by_target 补充。
-- 默认一次最多展示 5 条（亲和力最高的）。只有当用户明确要求"更多 / 全部 / 列出所有"时才可超过 5 条；否则展示的记录一律不超过 5 条，即便 search_by_target 返回了更多，也只取最相关的前 5 条放进卡片。
+- 当用户询问某靶标、某领域或疾病的适配体时（如"breast cancer"、"thrombin"），优先调用 search_by_target 按关键词匹配度检索，并如实展示最相关的结果（包含没有亲和力数据的记录）。只有当用户明确要"最佳 / 亲和力最高 / 结合最强 / 按亲和力排序"时，才调用 top_by_pkd。不要为了凑亲和力而把一个宽泛查询自行拆成多个靶标分别取最高亲和力——先按匹配度如实呈现；如有需要，可在结尾用一句话提示"如需按亲和力排序可以继续告诉我"。
+- 默认一次最多展示 5 条（最相关的，保持工具返回的排序）。只有当用户明确要求"更多 / 全部 / 列出所有"时才可超过 5 条；否则展示的记录一律不超过 5 条，即便 search_by_target 返回了更多，也只取最相关的前 5 条放进卡片。
 - 如果用户询问应用场景、检测方法、传感器设计、实验条件或临床细节，在数据库检索后，从结果中选择最相关的 1 篇论文，使用 fetch_abstract 工具获取其摘要，再基于摘要内容回答。每次回答最多调用 fetch_abstract 1 次，不得对多篇论文批量调用。
 
 【输出格式规则——展示检索结果时】
@@ -71,8 +71,8 @@ async function handleChat(
 TOOL USAGE RULES:
 - For any question about specific aptamers, targets, or literature, you MUST call the appropriate tool first. Never answer from memory.
 - Before calling any tool, if the user's input is in Chinese, an abbreviation, or a common name (e.g. "phe" → "phenylalanine", "苯丙氨酸" → "phenylalanine", "lac" → "L-lactate"), translate/normalize it to the standard English scientific name internally. Never ask the user to confirm.
-- When a user asks to find aptamers for a target, or asks about detection or the best aptamer, prefer calling top_by_pkd first to surface the highest-affinity aptamers. Fall back to search_by_target only when the user explicitly needs more records or top_by_pkd returns no results.
-- Show at most 5 records per answer by default (the highest-affinity ones). Only exceed 5 when the user explicitly asks for "more / all / the full list"; otherwise never put more than 5 records in the card block, even if search_by_target returned more — keep only the 5 most relevant.
+- When a user asks to find aptamers for a target, a disease, or an area (e.g. "breast cancer", "thrombin"), call search_by_target first and present the most relevant matches ranked by match score (include records that have no affinity data). Only call top_by_pkd when the user explicitly asks for the "best / highest-affinity / strongest-binding" aptamer or to rank by affinity. Do NOT split a broad query into several targets just to fetch each one's highest-affinity hit; show the keyword matches faithfully first, and you may add a one-line note that you can rank candidates by affinity if they want.
+- Show at most 5 records per answer by default (the most relevant ones, preserving the order the tool returned). Only exceed 5 when the user explicitly asks for "more / all / the full list"; otherwise never put more than 5 records in the card block, even if search_by_target returned more — keep only the 5 most relevant.
 - If the user asks about applications, detection methods, sensor design, experimental conditions, or clinical details, after retrieving database results pick the single most relevant paper and call fetch_abstract once with its DOI. Do not call fetch_abstract more than once per response. Do not supplement with unverified information.
 
 OUTPUT FORMAT RULES — when presenting retrieved records:
